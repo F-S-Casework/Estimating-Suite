@@ -1,0 +1,1498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Form &amp; Structure · Job Dashboard</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:15px}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f1f5f9;color:#1e293b;height:100vh;overflow:hidden;display:flex;flex-direction:column}
+
+/* TOP BAR */
+#topbar{background:#0f172a;height:58px;display:flex;align-items:center;padding:0 20px;gap:14px;flex-shrink:0;border-bottom:2px solid #1e3a5f}
+.logo{color:#fff;font-size:18px;font-weight:800;letter-spacing:-.5px;white-space:nowrap}
+.logo span{color:#60a5fa}
+.sync-pill{display:flex;align-items:center;gap:7px;background:#1e293b;border:1px solid #334155;border-radius:20px;padding:5px 12px}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:#94a3b8;flex-shrink:0}
+.sync-dot.on{background:#22c55e;box-shadow:0 0 6px #22c55e88}
+.sync-txt{font-size:12px;font-weight:600;color:#94a3b8;white-space:nowrap}
+.sync-txt.on{color:#86efac}
+#topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+#refresh-btn{background:transparent;border:1px solid #334155;color:#94a3b8;border-radius:7px;padding:7px 10px;cursor:pointer;display:flex;align-items:center;gap:5px;font-size:13px;font-weight:600;transition:all .15s;font-family:inherit}
+#refresh-btn:hover{background:#1e293b;color:#e2e8f0;border-color:#475569}
+#em-btn{background:#2563eb;color:#fff;border:none;cursor:pointer;padding:9px 16px;border-radius:7px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:7px;transition:background .15s;font-family:inherit}
+#em-btn:hover{background:#1d4ed8}
+#topbar-info{color:#64748b;font-size:12px;white-space:nowrap;max-width:260px;overflow:hidden;text-overflow:ellipsis}
+
+/* LAYOUT */
+#layout{display:flex;flex:1;overflow:hidden}
+
+/* SIDEBAR */
+#sidebar{width:210px;background:#0f172a;display:flex;flex-direction:column;padding:12px 0;flex-shrink:0;border-right:1px solid #1e293b}
+.nav-item{display:flex;align-items:center;gap:13px;padding:13px 20px;color:#94a3b8;cursor:pointer;font-size:15px;font-weight:500;transition:all .15s;border-left:3px solid transparent;user-select:none}
+.nav-item:hover{background:#1e293b;color:#e2e8f0}
+.nav-item.active{background:#1e3a5f;color:#93c5fd;border-left-color:#3b82f6}
+.nav-item svg{width:20px;height:20px;flex-shrink:0}
+.nav-sec{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#334155;padding:16px 20px 6px}
+#sidebar .bot{margin-top:auto}
+.folder-name{font-size:11px;color:#475569;padding:6px 20px 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* MAIN */
+#main{flex:1;overflow-y:auto;padding:26px}
+.view{display:none}
+.view.active{display:block}
+
+/* CONNECT SCREEN */
+#connect-screen{position:fixed;inset:0;background:#f1f5f9;z-index:500;display:flex;align-items:center;justify-content:center}
+#connect-screen.hidden{display:none}
+.connect-card{background:#fff;border-radius:16px;padding:48px 52px;max-width:520px;width:100%;text-align:center;border:1px solid #e2e8f0;box-shadow:0 8px 40px rgba(0,0,0,.1)}
+.connect-logo{font-size:26px;font-weight:900;color:#0f172a;margin-bottom:6px}
+.connect-logo span{color:#2563eb}
+.connect-title{font-size:22px;font-weight:800;color:#0f172a;margin-bottom:10px}
+.connect-sub{font-size:15px;color:#64748b;line-height:1.6;margin-bottom:32px}
+.connect-btn{background:#2563eb;color:#fff;border:none;border-radius:10px;padding:15px 32px;font-size:16px;font-weight:700;cursor:pointer;width:100%;display:flex;align-items:center;justify-content:center;gap:10px;transition:background .15s;font-family:inherit;margin-bottom:16px}
+.connect-btn:hover{background:#1d4ed8}
+.connect-steps{text-align:left;background:#f8fafc;border-radius:10px;padding:18px 20px;margin-top:8px}
+.connect-steps p{font-size:13px;color:#475569;margin-bottom:6px;font-weight:600}
+.connect-steps li{font-size:13px;color:#64748b;margin-bottom:5px;padding-left:4px}
+.connect-steps ul{padding-left:18px}
+
+/* NAME PROMPT */
+#name-screen{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:600;display:none;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
+#name-screen.open{display:flex}
+.name-card{background:#fff;border-radius:14px;padding:36px 40px;max-width:420px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.name-card h2{font-size:20px;font-weight:800;margin-bottom:8px}
+.name-card p{font-size:14px;color:#64748b;margin-bottom:24px;line-height:1.5}
+.name-opts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.name-opt{background:#f8fafc;border:2px solid #e2e8f0;border-radius:9px;padding:12px;cursor:pointer;font-size:15px;font-weight:700;transition:all .15s;font-family:inherit}
+.name-opt:hover,.name-opt.sel{border-color:#2563eb;background:#eff6ff;color:#1d4ed8}
+.name-custom{display:flex;gap:8px;margin-top:4px}
+.name-input{border:1.5px solid #d1d5db;border-radius:8px;padding:10px 13px;font-size:14px;font-family:inherit;outline:none;flex:1}
+.name-input:focus{border-color:#2563eb;box-shadow:0 0 0 3px #dbeafe}
+
+/* PAGE HEADERS */
+.ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px}
+.ph-title{font-size:23px;font-weight:800;color:#0f172a}
+.ph-sub{font-size:13px;color:#64748b;margin-top:3px}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:26px}
+.sc{background:#fff;border-radius:10px;padding:20px;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.sc.blue{background:#2563eb;border-color:#2563eb}
+.sc-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#64748b;margin-bottom:8px}
+.sc.blue .sc-lbl{color:#bfdbfe}
+.sc-val{font-size:30px;font-weight:900;color:#0f172a;line-height:1}
+.sc.blue .sc-val{color:#fff}
+.sc-sub{font-size:12px;color:#94a3b8;margin-top:5px}
+.sc.blue .sc-sub{color:#bfdbfe}
+
+/* TABLE */
+.tw{background:#fff;border-radius:10px;border:1px solid #e2e8f0;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.tb{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid #f1f5f9;flex-wrap:wrap}
+.tb input[type=text]{border:1px solid #e2e8f0;border-radius:7px;padding:9px 14px;font-size:14px;width:240px;outline:none;transition:border-color .15s;font-family:inherit}
+.tb input[type=text]:focus{border-color:#2563eb;box-shadow:0 0 0 3px #dbeafe}
+.fsel{border:1px solid #e2e8f0;border-radius:7px;padding:9px 12px;font-size:14px;outline:none;cursor:pointer;background:#fff;font-family:inherit}
+.fsel:focus{border-color:#2563eb}
+.ml{margin-left:auto;font-size:13px;color:#94a3b8}
+table{width:100%;border-collapse:collapse}
+thead{background:#f8fafc}
+thead th{padding:11px 16px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#64748b;border-bottom:1px solid #e2e8f0}
+tbody tr{border-bottom:1px solid #f1f5f9;cursor:pointer;transition:background .1s}
+tbody tr:hover{background:#f8fafc}
+tbody tr:last-child{border-bottom:none}
+tbody td{padding:14px 16px;font-size:14px;color:#1e293b;vertical-align:middle}
+.t-num{font-weight:800;font-family:'SF Mono','Cascadia Code',monospace;font-size:13px;color:#1e40af}
+.t-client{font-weight:700}
+.t-proj{color:#475569;font-size:13px}
+.t-val{font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;padding:4px 11px;border-radius:20px;font-size:12px;font-weight:700;white-space:nowrap}
+.s-ready{background:#f1f5f9;color:#475569}
+.s-active{background:#fef3c7;color:#92400e}
+.s-completed{background:#d1fae5;color:#065f46}
+.s-installed{background:#cffafe;color:#164e63}
+.s-void{background:#fee2e2;color:#991b1b}
+.pm-dot{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;font-size:13px;font-weight:800;color:#fff;flex-shrink:0}
+.pm-G{background:#7c3aed}.pm-P{background:#d97706}.pm-J{background:#0284c7}
+.crew-tag{display:inline-flex;align-items:center;gap:4px;background:#f1f5f9;border-radius:5px;padding:2px 7px;font-size:12px;font-weight:700;color:#475569;white-space:nowrap}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;border:none;transition:all .15s;white-space:nowrap;font-family:inherit}
+.btn-primary{background:#2563eb;color:#fff}
+.btn-primary:hover{background:#1d4ed8}
+.btn-secondary{background:#f1f5f9;color:#374151;border:1px solid #e2e8f0}
+.btn-secondary:hover{background:#e2e8f0}
+.btn-sm{padding:7px 14px;font-size:13px;border-radius:7px}
+.btn-danger{background:#fee2e2;color:#dc2626;border:1px solid #fecaca}
+.btn-danger:hover{background:#fecaca}
+.btn-x{padding:6px;border-radius:6px;background:transparent;border:none;cursor:pointer;color:#64748b;transition:all .15s;display:flex;align-items:center}
+.btn-x:hover{background:#f1f5f9;color:#1e293b}
+
+/* MODALS */
+.mbk{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;display:none;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
+.mbk.open{display:flex}
+.modal{background:#fff;border-radius:14px;width:700px;max-width:calc(100vw - 32px);max-height:calc(100vh - 60px);overflow-y:auto;box-shadow:0 25px 80px rgba(0,0,0,.35)}
+.modal.wide{width:780px}
+.mh{display:flex;align-items:center;justify-content:space-between;padding:20px 26px;border-bottom:1px solid #f1f5f9;position:sticky;top:0;background:#fff;z-index:1;border-radius:14px 14px 0 0}
+.mt{font-size:19px;font-weight:800}
+.mb{padding:24px 26px}
+.mf{display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:16px 26px;border-top:1px solid #f1f5f9;position:sticky;bottom:0;background:#fff;border-radius:0 0 14px 14px}
+
+/* FORM */
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.fi{display:flex;flex-direction:column;gap:7px}
+.fi.full{grid-column:1/-1}
+.fi.third{grid-column:span 1}
+.fl{font-size:14px;font-weight:700;color:#374151}
+.fl .req{color:#ef4444;margin-left:2px}
+.finp,.fsel2,.fta{border:1px solid #d1d5db;border-radius:8px;padding:11px 14px;font-size:15px;font-family:inherit;outline:none;transition:border-color .15s;background:#fff;color:#1e293b;width:100%}
+.finp:focus,.fsel2:focus,.fta:focus{border-color:#2563eb;box-shadow:0 0 0 3px #dbeafe}
+.fta{resize:vertical;min-height:80px}
+.fhint{font-size:12px;color:#94a3b8}
+
+/* INSTALL RANGE WIDGET */
+.install-range-wrap{grid-column:1/-1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px 18px}
+.install-range-title{font-size:13px;font-weight:800;color:#374151;margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px}
+.install-range-row{display:grid;grid-template-columns:1fr auto 1fr 1fr;gap:12px;align-items:end}
+.install-arrow{font-size:18px;color:#94a3b8;padding-bottom:11px;text-align:center}
+.install-range-hint{font-size:12px;color:#94a3b8;margin-top:8px}
+
+/* FILE SLOTS */
+.fs-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:8px}
+.fslot{border:2px dashed #d1d5db;border-radius:9px;padding:13px 14px;cursor:pointer;transition:all .15s;position:relative;background:#fafafa;display:flex;flex-direction:column;gap:3px}
+.fslot:hover{border-color:#2563eb;background:#eff6ff}
+.fslot.filled{border-style:solid;border-color:#86efac;background:#f0fdf4}
+.fslot input[type=file]{display:none}
+.fsl-lbl{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#64748b}
+.fsl-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#1e293b}
+.fsl-empty{font-size:13px;color:#94a3b8}
+.fsl-size{font-size:11px;color:#10b981}
+.fsl-rm{position:absolute;top:7px;right:7px;width:20px;height:20px;border-radius:50%;background:#fee2e2;color:#dc2626;border:none;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;font-weight:800;line-height:1}
+
+/* CALENDAR */
+.calw{background:#fff;border-radius:10px;border:1px solid #e2e8f0;overflow:hidden}
+.cal-hdr{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #f1f5f9}
+.cal-ttl{font-size:19px;font-weight:800}
+/* Capacity summary bar */
+.cal-cap{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;border-bottom:1px solid #f1f5f9;flex-wrap:wrap;gap:8px}
+.cal-cap-info{font-size:13px;color:#475569;font-weight:600}
+.cal-cap-info strong{color:#1e293b}
+.cap-meter{display:flex;align-items:center;gap:10px}
+.cap-bar-wrap{width:160px;height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden}
+.cap-bar-fill{height:100%;border-radius:4px;transition:width .3s}
+.cap-label{font-size:12px;font-weight:700;white-space:nowrap}
+.cap-0{color:#94a3b8}
+.cap-1{color:#059669}
+.cap-2{color:#d97706}
+.cap-3{color:#ea580c}
+.cap-4{color:#dc2626}
+.cal-dh{display:grid;grid-template-columns:repeat(7,1fr);background:#f8fafc;border-bottom:1px solid #e2e8f0}
+.cal-dh div{padding:10px;text-align:center;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#64748b}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr)}
+/* Calendar cell capacity shading */
+.cc{min-height:95px;padding:8px;border-right:1px solid #f1f5f9;border-bottom:1px solid #f1f5f9;transition:background .2s}
+.cc:nth-child(7n){border-right:none}
+.cc.om .cd{color:#cbd5e1}
+.cc.td{outline:2px solid #2563eb;outline-offset:-2px}
+/* Capacity levels — 1 crew, 2-3, 4-5, 6+ */
+.cc.cap-lt{background:#f0fdf4}
+.cc.cap-md{background:#fefce8}
+.cc.cap-hv{background:#fff7ed}
+.cc.cap-mx{background:#fef2f2}
+.cd{font-size:13px;font-weight:700;color:#334155;margin-bottom:4px;line-height:1}
+.cc.td .cd{background:#2563eb;color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.cpill{font-size:11px;font-weight:600;padding:2px 6px;border-radius:4px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.cpill:hover{opacity:.8}
+.cp-G{background:#ede9fe;color:#5b21b6}.cp-P{background:#fef3c7;color:#92400e}.cp-J{background:#dbeafe;color:#1e40af}
+
+/* UPCOMING CARDS */
+.upc-list{display:flex;flex-direction:column;gap:10px}
+.upc{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid #e2e8f0;border-radius:9px;padding:14px 16px;cursor:pointer;transition:all .15s}
+.upc:hover{border-color:#3b82f6;box-shadow:0 0 0 3px #dbeafe}
+.upc-dt{border-radius:9px;padding:9px 11px;text-align:center;flex-shrink:0;min-width:52px}
+.upc-day{font-size:22px;font-weight:900;line-height:1;color:#1e293b}
+.upc-mon{font-size:11px;font-weight:800;text-transform:uppercase}
+.upc-info{flex:1;min-width:0}
+.upc-id{font-size:12px;font-weight:700;color:#64748b}
+.upc-name{font-size:15px;font-weight:800;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.upc-desc{font-size:13px;color:#64748b}
+
+/* DETAIL */
+.dmg{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;background:#f8fafc;border-radius:10px;padding:18px;margin-bottom:20px}
+.dmi .dlbl{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#94a3b8;margin-bottom:4px}
+.dmi .dval{font-size:15px;font-weight:700;color:#1e293b}
+.sbtn{padding:8px 16px;border-radius:22px;font-size:13px;font-weight:700;cursor:pointer;border:2px solid transparent;transition:all .15s;font-family:inherit}
+.sbtn.on{border-color:currentColor}
+
+/* EMPTY */
+.empty{padding:50px 20px;text-align:center;color:#94a3b8}
+.empty p{font-size:15px}
+
+/* LEGEND */
+.legend{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.leg-i{display:flex;align-items:center;gap:7px;font-size:14px;color:#475569}
+.leg-dot{width:12px;height:12px;border-radius:50%}
+
+/* SETTINGS */
+.sbox{background:#fff;border-radius:10px;border:1px solid #e2e8f0;padding:26px;max-width:580px;margin-bottom:20px}
+.sbox h3{font-size:16px;font-weight:800;margin-bottom:16px;color:#1e293b}
+.sbox hr{border:none;border-top:1px solid #f1f5f9;margin:20px 0}
+
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinning{animation:spin .8s linear infinite}
+
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}
+
+/* ── CHANGE ORDERS ─────────────────────────────────────────────────────── */
+.co-wrap,.alog-wrap{margin-top:22px;padding-top:18px;border-top:1px solid #f1f5f9}
+.sec-ttl{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#475569;margin-bottom:12px}
+.co-summary-box{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:13px 16px;margin-bottom:12px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.co-orig-lbl{font-size:13px;color:#64748b}
+.co-curr-val{font-size:20px;font-weight:900;color:#059669;line-height:1}
+.co-delta-lbl{font-size:13px;color:#64748b}
+.co-list{display:flex;flex-direction:column;gap:7px;margin-bottom:12px}
+.co-item{background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;padding:10px 13px;display:flex;align-items:flex-start;gap:10px}
+.co-n{font-size:11px;font-weight:800;color:#94a3b8;min-width:26px;padding-top:2px}
+.co-body{flex:1;min-width:0}
+.co-desc-txt{font-size:14px;font-weight:700;color:#1e293b}
+.co-meta-row{font-size:12px;color:#94a3b8;margin-top:2px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.co-st{padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;display:inline-block}
+.co-st.sub{background:#fef9c3;color:#92400e}
+.co-st.apv{background:#dcfce7;color:#166534}
+.co-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;margin-left:auto;flex-shrink:0}
+.co-amt-val{font-size:15px;font-weight:800}
+.co-amt-val.pos{color:#059669}.co-amt-val.neg{color:#ef4444}
+.co-actions{display:flex;gap:5px}
+.co-btn{padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;font-family:inherit}
+.co-btn.approve{background:#dcfce7;color:#166534}.co-btn.approve:hover{background:#bbf7d0}
+.co-btn.rm{background:#fee2e2;color:#dc2626}.co-btn.rm:hover{background:#fecaca}
+.co-add-form{background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;padding:12px}
+.co-add-row{display:grid;grid-template-columns:1fr 110px 130px;gap:8px;margin-bottom:9px}
+.co-add-row input,.co-add-row select{border:1px solid #d1d5db;border-radius:7px;padding:8px 11px;font-size:13px;font-family:inherit;outline:none;width:100%}
+.co-add-row input:focus,.co-add-row select:focus{border-color:#2563eb;box-shadow:0 0 0 3px #dbeafe}
+/* ── ACTIVITY LOG ──────────────────────────────────────────────────────── */
+.alog-list{display:flex;flex-direction:column}
+.alog-item{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid #f1f5f9}
+.alog-item:last-child{border-bottom:none}
+.alog-av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;background:#e0e7ff;color:#3730a3}
+.alog-content{flex:1}
+.alog-text{font-size:13px;color:#1e293b;line-height:1.45}
+.alog-meta{font-size:11px;color:#94a3b8;margin-top:2px}
+.alog-add{display:flex;gap:8px;margin-top:10px;align-items:flex-end}
+.alog-add textarea{flex:1;border:1px solid #d1d5db;border-radius:8px;padding:9px 12px;font-size:13px;font-family:inherit;outline:none;resize:none;height:56px}
+.alog-add textarea:focus{border-color:#2563eb;box-shadow:0 0 0 3px #dbeafe}
+/* ── TABLE CO INDICATOR ────────────────────────────────────────────────── */
+.val-has-co{color:#059669}.co-badge{display:inline-block;background:#dcfce7;color:#166534;font-size:10px;font-weight:800;padding:1px 6px;border-radius:10px;margin-left:4px;vertical-align:middle}
+</style>
+</head>
+<body>
+
+<!-- CONNECT SCREEN -->
+<div id="connect-screen">
+  <div class="connect-card">
+    <div class="connect-logo">Form &amp; <span>Structure</span></div>
+    <div style="font-size:13px;color:#94a3b8;margin-bottom:24px">Job Dashboard</div>
+    <div class="connect-title">Connect to Shared Folder</div>
+    <div class="connect-sub">Point the dashboard to your OneDrive folder so all job data and documents are shared with the whole team.</div>
+    <button class="connect-btn" onclick="connectFolder()">
+      <svg viewBox="0 0 20 20" fill="currentColor" style="width:18px;height:18px"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/></svg>
+      Connect to OneDrive Folder
+    </button>
+    <div class="connect-steps">
+      <p>How it works:</p>
+      <ul>
+        <li>Click the button — a folder picker will open</li>
+        <li>Navigate to your shared <strong>FS Job Dashboard</strong> OneDrive folder</li>
+        <li>Click "Select Folder" — you only do this once per computer</li>
+        <li>All jobs and attached documents sync automatically across the team</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- NAME PROMPT -->
+<div id="name-screen">
+  <div class="name-card">
+    <h2>Who are you?</h2>
+    <p>Set your name so the team knows who made changes. You can update this anytime in Settings.</p>
+    <div class="name-opts">
+      <button class="name-opt" onclick="pickName('Evan',this)">Evan</button>
+      <button class="name-opt" onclick="pickName('Geoff',this)">Geoff</button>
+      <button class="name-opt" onclick="pickName('Pat',this)">Pat</button>
+      <button class="name-opt" onclick="pickName('Joe',this)">Joe</button>
+    </div>
+    <div class="name-custom">
+      <input type="text" class="name-input" id="custom-name" placeholder="Or type your name...">
+      <button class="btn btn-primary btn-sm" onclick="pickNameCustom()">Continue</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div class="logo">Form &amp; <span>Structure</span></div>
+  <div class="sync-pill">
+    <div class="sync-dot" id="sync-dot"></div>
+    <span class="sync-txt" id="sync-txt">Not connected</span>
+  </div>
+  <div id="topbar-right">
+    <span id="topbar-info"></span>
+    <button id="refresh-btn" onclick="manualRefresh()">
+      <svg id="refresh-icon" viewBox="0 0 20 20" fill="currentColor" style="width:14px;height:14px"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/></svg>
+      Refresh
+    </button>
+    <button id="em-btn" onclick="openEM()">
+      <svg viewBox="0 0 20 20" fill="currentColor" style="width:14px;height:14px"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/></svg>
+      Estimating Master
+    </button>
+  </div>
+</div>
+
+<!-- LAYOUT -->
+<div id="layout">
+<div id="sidebar">
+  <div class="nav-item active" id="nav-dashboard" onclick="nav('dashboard',this)">
+    <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/></svg>
+    Dashboard
+  </div>
+  <div class="nav-item" id="nav-jobs" onclick="nav('jobs',this)">
+    <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/></svg>
+    All Jobs
+  </div>
+  <div class="nav-item" id="nav-calendar" onclick="nav('calendar',this)">
+    <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/></svg>
+    Calendar
+  </div>
+  <div class="nav-sec">Actions</div>
+  <div class="nav-item" onclick="openAdd()">
+    <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg>
+    New Job
+  </div>
+  <div class="bot">
+    <div class="folder-name" id="folder-name-side"></div>
+    <div class="nav-item" id="nav-settings" onclick="nav('settings',this)">
+      <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/></svg>
+      Settings
+    </div>
+  </div>
+</div>
+
+<div id="main">
+
+  <!-- DASHBOARD -->
+  <div id="view-dashboard" class="view active">
+    <div class="ph">
+      <div><div class="ph-title">Dashboard</div><div class="ph-sub" id="dash-sub"></div></div>
+      <button class="btn btn-primary" onclick="openAdd()">
+        <svg viewBox="0 0 20 20" fill="currentColor" style="width:16px;height:16px"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg>
+        New Job
+      </button>
+    </div>
+    <div class="stats" id="stats"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px">
+      <div>
+        <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#475569;margin-bottom:12px">Installing Soon</div>
+        <div id="upc-list" class="upc-list"></div>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#475569;margin-bottom:12px">In Progress</div>
+        <div id="ip-list" class="upc-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ALL JOBS -->
+  <div id="view-jobs" class="view">
+    <div class="ph">
+      <div><div class="ph-title">All Jobs — 2026</div><div class="ph-sub" id="jobs-sub"></div></div>
+      <button class="btn btn-primary" onclick="openAdd()">
+        <svg viewBox="0 0 20 20" fill="currentColor" style="width:16px;height:16px"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg>
+        New Job
+      </button>
+    </div>
+    <div class="tw">
+      <div class="tb">
+        <input type="text" id="srch" placeholder="Search client, project, job #..." oninput="applyFilters()">
+        <select class="fsel" id="fpm" onchange="applyFilters()">
+          <option value="">All PMs</option>
+          <option value="G">Geoff</option>
+          <option value="P">Pat</option>
+          <option value="J">Joe</option>
+        </select>
+        <select class="fsel" id="fst" onchange="applyFilters()">
+          <option value="">All Statuses</option>
+          <option value="ready">Ready to Start</option>
+          <option value="active">In Progress</option>
+          <option value="completed">Completed</option>
+          <option value="installed">Installed</option>
+          <option value="void">Void</option>
+        </select>
+        <div class="ml" id="jobs-ct"></div>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr>
+            <th style="width:80px">Job #</th>
+            <th>Client</th>
+            <th>Project</th>
+            <th style="width:80px">PM</th>
+            <th style="width:120px">Status</th>
+            <th style="width:110px;text-align:right">Value</th>
+            <th style="width:180px">Install Window</th>
+            <th style="width:60px;text-align:center">Crew</th>
+            <th style="width:60px;text-align:center">Docs</th>
+          </tr></thead>
+          <tbody id="jtbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- CALENDAR -->
+  <div id="view-calendar" class="view">
+    <div class="ph">
+      <div class="ph-title">Install Calendar</div>
+      <div class="legend">
+        <div class="leg-i"><div class="leg-dot" style="background:#7c3aed"></div>Geoff</div>
+        <div class="leg-i"><div class="leg-dot" style="background:#d97706"></div>Pat</div>
+        <div class="leg-i"><div class="leg-dot" style="background:#0284c7"></div>Joe</div>
+        <div style="width:1px;height:16px;background:#e2e8f0"></div>
+        <div class="leg-i"><div style="width:12px;height:12px;border-radius:3px;background:#f0fdf4;border:1px solid #86efac"></div>Light</div>
+        <div class="leg-i"><div style="width:12px;height:12px;border-radius:3px;background:#fefce8;border:1px solid #fde047"></div>Moderate</div>
+        <div class="leg-i"><div style="width:12px;height:12px;border-radius:3px;background:#fff7ed;border:1px solid #fdba74"></div>Heavy</div>
+        <div class="leg-i"><div style="width:12px;height:12px;border-radius:3px;background:#fef2f2;border:1px solid #fca5a5"></div>Full</div>
+      </div>
+    </div>
+    <div class="calw">
+      <div class="cal-hdr">
+        <button class="btn btn-secondary btn-sm" onclick="calNav(-1)">← Previous</button>
+        <div class="cal-ttl" id="cal-ttl"></div>
+        <button class="btn btn-secondary btn-sm" onclick="calNav(1)">Next →</button>
+      </div>
+      <!-- Capacity summary bar -->
+      <div class="cal-cap" id="cal-cap"></div>
+      <div class="cal-dh"><div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div></div>
+      <div class="cal-grid" id="cal-grid"></div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div id="view-settings" class="view">
+    <div class="ph"><div class="ph-title">Settings</div></div>
+    <div class="sbox">
+      <h3>👤 Your Name</h3>
+      <div class="fi" style="margin-bottom:0">
+        <label class="fl">Display Name</label>
+        <input type="text" class="finp" id="s-name" placeholder="e.g. Evan" style="max-width:260px">
+        <div class="fhint">Shows on the dashboard when you save changes.</div>
+      </div>
+      <hr>
+      <h3>📊 Estimating Master Link</h3>
+      <div class="fi" style="margin-bottom:0">
+        <label class="fl">File Path</label>
+        <input type="text" class="finp" id="s-em" placeholder="C:\Users\Evan\OneDrive - Form &amp; Structure\Estimating Master.xlsx">
+        <div class="fhint">Full path to your Estimating Master Excel file.</div>
+      </div>
+      <hr style="margin-bottom:16px">
+      <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+      <span id="s-saved" style="display:none;margin-left:12px;color:#10b981;font-weight:700;font-size:13px">✓ Saved!</span>
+    </div>
+    <div class="sbox">
+      <h3>📁 Shared Folder</h3>
+      <p style="font-size:14px;color:#64748b;margin-bottom:14px">All jobs and documents live in your connected OneDrive folder.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-secondary btn-sm" onclick="connectFolder()">Change Folder</button>
+        <button class="btn btn-danger btn-sm" onclick="disconnectFolder()">Disconnect</button>
+      </div>
+      <div style="margin-top:12px;font-size:13px;color:#94a3b8">Connected: <strong id="s-folder-name" style="color:#475569">—</strong></div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+</div><!-- /layout -->
+
+<!-- MODAL: JOB DETAIL -->
+<div id="m-detail" class="mbk" onclick="backdropClose(event,'m-detail')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="mh">
+      <div>
+        <div class="mt" id="d-title"></div>
+        <div style="font-size:13px;color:#64748b;margin-top:3px" id="d-sub"></div>
+      </div>
+      <div style="display:flex;gap:9px;align-items:center">
+        <button class="btn btn-secondary btn-sm" onclick="openEdit(activeJob)">Edit Job</button>
+        <button class="btn-x" onclick="closeModal('m-detail')"><svg viewBox="0 0 20 20" fill="currentColor" style="width:19px;height:19px"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg></button>
+      </div>
+    </div>
+    <div class="mb" id="d-body"></div>
+  </div>
+</div>
+
+<!-- MODAL: ADD / EDIT JOB -->
+<div id="m-job" class="mbk" onclick="backdropClose(event,'m-job')">
+  <div class="modal wide" onclick="event.stopPropagation()">
+    <div class="mh">
+      <div class="mt" id="mj-title">New Job</div>
+      <button class="btn-x" onclick="closeModal('m-job')"><svg viewBox="0 0 20 20" fill="currentColor" style="width:19px;height:19px"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg></button>
+    </div>
+    <div class="mb">
+      <div class="fg">
+        <div class="fi">
+          <label class="fl">Job Number <span class="req">*</span></label>
+          <input type="text" class="finp" id="f-num" placeholder="e.g. G047">
+        </div>
+        <div class="fi">
+          <label class="fl">Project Manager <span class="req">*</span></label>
+          <select class="fsel2" id="f-pm" onchange="pmChanged()">
+            <option value="">Select PM...</option>
+            <option value="G">Geoff</option>
+            <option value="P">Pat</option>
+            <option value="J">Joe</option>
+          </select>
+        </div>
+        <div class="fi">
+          <label class="fl">Client <span class="req">*</span></label>
+          <input type="text" class="finp" id="f-client" placeholder="e.g. OHSU HMC">
+        </div>
+        <div class="fi">
+          <label class="fl">Project Description</label>
+          <input type="text" class="finp" id="f-proj" placeholder="e.g. Nurse Station Casework">
+        </div>
+        <div class="fi">
+          <label class="fl">Status</label>
+          <select class="fsel2" id="f-status">
+            <option value="ready">Ready to Start</option>
+            <option value="active">In Progress</option>
+            <option value="completed">Completed</option>
+            <option value="installed">Installed</option>
+            <option value="void">Void</option>
+          </select>
+        </div>
+        <div class="fi">
+          <label class="fl">Contract Value ($)</label>
+          <input type="number" class="finp" id="f-val" placeholder="0.00" min="0" step="0.01">
+        </div>
+        <div class="fi">
+          <label class="fl">GC / General Contractor</label>
+          <input type="text" class="finp" id="f-gc" placeholder="e.g. Norwest Construction">
+        </div>
+        <div class="fi">
+          <label class="fl">Crew Size</label>
+          <select class="fsel2" id="f-crew">
+            <option value="1">1 installer</option>
+            <option value="2">2 installers</option>
+            <option value="3">3 installers</option>
+            <option value="4">4 installers</option>
+            <option value="5">5 installers</option>
+            <option value="6">6+ installers</option>
+          </select>
+        </div>
+
+        <!-- INSTALL RANGE WIDGET -->
+        <div class="install-range-wrap">
+          <div class="install-range-title">📅 Install Window</div>
+          <div class="install-range-row">
+            <div class="fi">
+              <label class="fl">Start Date</label>
+              <input type="date" class="finp" id="f-start" oninput="calcEnd()">
+            </div>
+            <div class="install-arrow">→</div>
+            <div class="fi">
+              <label class="fl">End Date</label>
+              <input type="date" class="finp" id="f-end" oninput="calcDur()">
+            </div>
+            <div class="fi">
+              <label class="fl">Duration (days)</label>
+              <input type="number" class="finp" id="f-dur" placeholder="e.g. 5" min="1" oninput="calcEnd()">
+            </div>
+          </div>
+          <div class="install-range-hint">Enter start + duration and the end date fills automatically — or pick both dates and duration calculates for you.</div>
+        </div>
+
+        <div class="fi full">
+          <label class="fl">Notes</label>
+          <textarea class="fta" id="f-notes" placeholder="Schedule details, access requirements, union status, special conditions..."></textarea>
+        </div>
+      </div>
+
+      <div style="margin-top:22px">
+        <div style="font-size:14px;font-weight:800;color:#374151;margin-bottom:4px">📎 Attach Job Documents</div>
+        <div style="font-size:12px;color:#94a3b8;margin-bottom:10px">Files save directly to the shared OneDrive folder — the whole team can open them.</div>
+        <div class="fs-grid" id="fslots"></div>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-secondary" onclick="closeModal('m-job')">Cancel</button>
+      <button class="btn btn-primary" id="save-btn" onclick="saveJob()" style="min-width:130px">Save Job</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===================== CONFIG =====================
+const FILE_SLOTS=[
+  {key:'drawings', label:'Drawings',       icon:'📐'},
+  {key:'specs',    label:'Specifications', icon:'📋'},
+  {key:'schedule', label:'Schedule',       icon:'📅'},
+  {key:'contract', label:'PO / Contract',  icon:'📄'},
+  {key:'proposal', label:'Proposal',       icon:'💼'},
+  {key:'other',    label:'Other',          icon:'📎'}
+];
+const SC={
+  ready:    {label:'Ready to Start',cls:'s-ready',    color:'#6366f1'},
+  active:   {label:'In Progress',   cls:'s-active',   color:'#d97706'},
+  completed:{label:'Completed',     cls:'s-completed',color:'#059669'},
+  installed:{label:'Installed',     cls:'s-installed',color:'#0891b2'},
+  void:     {label:'Void',          cls:'s-void',     color:'#dc2626'}
+};
+const PM={G:{name:'Geoff',color:'#7c3aed'},P:{name:'Pat',color:'#d97706'},J:{name:'Joe',color:'#0284c7'}};
+const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MONTHS_S=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+// ===================== SEED DATA =====================
+const SEED=[
+  {id:'G001',pm:'G',client:'MT. TABOR',project:'Kitchen',status:'active',value:0,installStart:'',installEnd:'',crewSize:2,gc:'',notes:''},
+  {id:'P002',pm:'P',client:'NIC RAMIREZ',project:'Doors',status:'active',value:1600,installStart:'',installEnd:'',crewSize:1,gc:'',notes:''},
+  {id:'G003',pm:'G',client:'ACC / PPMC',project:'Countertops',status:'active',value:5302,installStart:'',installEnd:'',crewSize:2,gc:'',notes:''},
+  {id:'G004',pm:'G',client:'OHSU HMC',project:'Q AUD Countersunk',status:'active',value:110,installStart:'',installEnd:'',crewSize:1,gc:'',notes:''},
+  {id:'G005',pm:'G',client:'LMHMC',project:'Radiation Oncology — Rm Drawers',status:'active',value:450,installStart:'',installEnd:'',crewSize:1,gc:'',notes:''},
+  {id:'G006',pm:'G',client:'OHSU HMC',project:'New Tabletop',status:'active',value:643,installStart:'',installEnd:'',crewSize:1,gc:'',notes:''},
+  {id:'G007',pm:'G',client:'COATS & TAILS',project:'Lobby / Misc',status:'active',value:3920,installStart:'',installEnd:'',crewSize:2,gc:'',notes:''},
+  {id:'P008',pm:'P',client:'UNIV. ACH. MILLWORK',project:'Hills. Campus',status:'active',value:3688,installStart:'',installEnd:'',crewSize:2,gc:'',notes:''},
+  {id:'G009',pm:'G',client:'OHSU HMC',project:'P/L Countertop',status:'active',value:1180,installStart:'',installEnd:'',crewSize:1,gc:'',notes:''},
+  {id:'P010',pm:'P',client:'MANION DESIGN LLC',project:'Base Cabs W/C',status:'active',value:2325.20,installStart:'',installEnd:'',crewSize:2,gc:'',notes:''},
+  {id:'G011',pm:'G',client:'VIKING',project:'LGS MOB 2 OP Pharmacy',status:'active',value:47988,installStart:'',installEnd:'',crewSize:3,gc:'',notes:''},
+  {id:'G012',pm:'G',client:'NORWEST',project:'OR Vasc. Specialists',status:'active',value:55575,installStart:'',installEnd:'',crewSize:4,gc:'',notes:''},
+  {id:'G013',pm:'G',client:'NORTHWEST PRIMARY CARE',project:'Kitchen',status:'active',value:7183,installStart:'',installEnd:'',crewSize:2,gc:'',notes:''},
+  {id:'J014',pm:'J',client:'LSCMC',project:'527 Closet',status:'void',value:1052,installStart:'',installEnd:'',crewSize:1,gc:'',notes:'Voided'},
+  {id:'G015',pm:'G',client:'JESUIT HS',project:'CT & Shelves',status:'active',value:589.95,installStart:'',installEnd:'',crewSize:2,gc:'',notes:''},
+  {id:'G016',pm:'G',client:'JOHN',project:'MDF Circles',status:'active',value:0,installStart:'',installEnd:'',crewSize:1,gc:'',notes:''},
+  {id:'G017',pm:'G',client:'JOHN',project:'Plywood Panels',status:'active',value:0,installStart:'',installEnd:'',crewSize:1,gc:'',notes:''},
+  {id:'G018',pm:'G',client:'LMHMC',project:'MOB 2 Ste 200',status:'active',value:6118,installStart:'',installEnd:'',crewSize:2,gc:'',notes:''},
+  {id:'G019',pm:'G',client:'OREGON RESTORATION',project:'Vanity',status:'active',value:1074,installStart:'',installEnd:'',crewSize:1,gc:'',notes:''},
+  {id:'P020',pm:'P',client:'MARK HORVAT',project:'Misc',status:'active',value:0,installStart:'',installEnd:'',crewSize:1,gc:'',notes:''},
+  {id:'G021',pm:'G',client:'NORWEST',project:'TOC Lab Removal',status:'active',value:3504,installStart:'',installEnd:'',crewSize:2,gc:'',notes:''},
+  {id:'G022',pm:'G',client:'5 STAR',project:'Emanuel Rm 5400 Casework',status:'active',value:5713,installStart:'',installEnd:'',crewSize:3,gc:'',notes:''},
+  {id:'P023',pm:'P',client:'JOHN HOLTMANN',project:'Golf Cabinet',status:'active',value:0,installStart:'',installEnd:'',crewSize:1,gc:'',notes:''},
+  {id:'G024',pm:'G',client:'CCDC',project:'Volcano View Bookcases',status:'active',value:4114,installStart:'',installEnd:'',crewSize:2,gc:'',notes:''},
+  {id:'G025',pm:'G',client:'SCHAFRON CONST.',project:'2 Doors',status:'active',value:0,installStart:'',installEnd:'',crewSize:1,gc:'',notes:''},
+  {id:'G026',pm:'G',client:'ESSEX',project:'Bonneville St. Johns',status:'active',value:3845,installStart:'',installEnd:'',crewSize:2,gc:'',notes:''},
+  {id:'G027',pm:'G',client:'LMHMC',project:'Maternity Cab',status:'active',value:1973,installStart:'',installEnd:'',crewSize:1,gc:'',notes:''},
+  {id:'G028',pm:'G',client:'CCDC',project:'Pacific Bld Suite 1012-1015',status:'active',value:9296,installStart:'',installEnd:'',crewSize:3,gc:'',notes:''},
+  {id:'G029',pm:'G',client:'TRAINOR COMMERCIAL',project:'Design Within Reach',status:'active',value:22923,installStart:'',installEnd:'',crewSize:3,gc:'',notes:''},
+  {id:'J030',pm:'J',client:'R HAKES',project:'Pacific Office Automation Reno',status:'active',value:6657,installStart:'',installEnd:'',crewSize:2,gc:'',notes:''},
+  {id:'J031',pm:'J',client:'R HAKES',project:'St. Andrews Church DR',status:'active',value:13731,installStart:'',installEnd:'',crewSize:2,gc:'PW',notes:''},
+  {id:'G032',pm:'G',client:'LMHMC',project:'FIV Cabin',status:'active',value:0,installStart:'',installEnd:'',crewSize:1,gc:'',notes:''},
+  {id:'G033',pm:'G',client:'5 STAR',project:'Unity Lobby Drawer Box',status:'active',value:157.50,installStart:'',installEnd:'',crewSize:1,gc:'',notes:''},
+  {id:'G034',pm:'G',client:'IU LINE',project:'Office Remodel',status:'active',value:4955,installStart:'',installEnd:'',crewSize:2,gc:'',notes:''},
+  {id:'G035',pm:'G',client:'BEAVERTON DENTAL',project:'Misc',status:'active',value:0,installStart:'',installEnd:'',crewSize:1,gc:'',notes:''},
+  {id:'G036',pm:'G',client:'ACC',project:'Prov. Gateway MOB X-Ray',status:'active',value:1746,installStart:'',installEnd:'',crewSize:2,gc:'',notes:''},
+  {id:'G037',pm:'G',client:'AWE',project:'Cut Parts',status:'active',value:200,installStart:'',installEnd:'',crewSize:1,gc:'',notes:''},
+  {id:'G038',pm:'G',client:'LOIS',project:'Countertop',status:'active',value:0,installStart:'',installEnd:'',crewSize:1,gc:'',notes:''},
+  {id:'G039',pm:'G',client:'ALOFT',project:'Refinish Door',status:'active',value:0,installStart:'',installEnd:'',crewSize:1,gc:'',notes:''},
+  {id:'G040',pm:'G',client:'FOREST GROVE',project:'Break Room',status:'active',value:4681,installStart:'',installEnd:'',crewSize:2,gc:'',notes:''},
+  {id:'G041',pm:'G',client:'5 STAR',project:'LEMC MOB 2 Ste 550',status:'active',value:2300,installStart:'',installEnd:'',crewSize:2,gc:'',notes:''},
+  {id:'G042',pm:'G',client:'ACC / LSMC',project:'OP Pharmacy',status:'active',value:36209,installStart:'',installEnd:'',crewSize:4,gc:'',notes:''},
+  {id:'G043',pm:'G',client:'JEFF RULE',project:'Door Repair',status:'active',value:0,installStart:'',installEnd:'',crewSize:1,gc:'',notes:''},
+  {id:'P044',pm:'P',client:'MARK ASPLUND',project:'Casework',status:'active',value:0,installStart:'',installEnd:'',crewSize:2,gc:'',notes:'T&M'},
+  {id:'G045',pm:'G',client:'LMHMC',project:'Staff Lounge',status:'active',value:3019,installStart:'',installEnd:'',crewSize:2,gc:'',notes:''},
+  {id:'G046',pm:'G',client:'NORWEST',project:'Rose City Head & Neck Surgery',status:'active',value:26942,installStart:'',installEnd:'',crewSize:4,gc:'',notes:''}
+];
+
+// ===================== STATE =====================
+let dirHandle=null, jobs=[], settings={}, activeJob=null, editingId=null;
+let calY=new Date().getFullYear(), calM=new Date().getMonth();
+let pf={}, lastTimestamp=null, autoRefreshTimer=null, pendingName='';
+
+// ===================== INDEXEDDB (handle only) =====================
+function hdlDB(){
+  return new Promise(ok=>{
+    const r=indexedDB.open('fs-hdl-v2',1);
+    r.onupgradeneeded=e=>e.target.result.createObjectStore('h');
+    r.onsuccess=e=>ok(e.target.result);
+    r.onerror=()=>ok(null);
+  });
+}
+async function storeHandle(h){const db=await hdlDB();if(!db)return;const tx=db.transaction('h','readwrite');tx.objectStore('h').put(h,'dir')}
+async function retrieveHandle(){const db=await hdlDB();if(!db)return null;return new Promise(ok=>{const r=db.transaction('h','readonly').objectStore('h').get('dir');r.onsuccess=()=>ok(r.result||null);r.onerror=()=>ok(null)})}
+async function clearHandle(){const db=await hdlDB();if(!db)return;db.transaction('h','readwrite').objectStore('h').delete('dir')}
+
+// ===================== PERMISSIONS =====================
+async function verifyPermission(h){
+  if(!h)return false;
+  try{
+    let p=await h.queryPermission({mode:'readwrite'});
+    if(p==='granted')return true;
+    return(await h.requestPermission({mode:'readwrite'}))==='granted';
+  }catch{return false}
+}
+
+// ===================== CONNECTION =====================
+async function connectFolder(){
+  try{
+    const h=await window.showDirectoryPicker({mode:'readwrite'});
+    dirHandle=h;
+    await storeHandle(h);
+    await loadJobs();
+    showConnected();
+    if(!settings.userName) showNamePrompt();
+  }catch(e){if(e.name!=='AbortError') alert('Could not connect: '+e.message)}
+}
+async function disconnectFolder(){
+  if(!confirm('Disconnect from folder? You can reconnect anytime.'))return;
+  await clearHandle(); dirHandle=null; jobs=[];
+  stopAutoRefresh();
+  document.getElementById('connect-screen').classList.remove('hidden');
+  setSyncStatus(false,'Not connected');
+}
+function showConnected(){
+  document.getElementById('connect-screen').classList.add('hidden');
+  setSyncStatus(true,'Live · '+(dirHandle?dirHandle.name:'folder'));
+  const fn=dirHandle?dirHandle.name:'';
+  document.getElementById('folder-name-side').textContent='📁 '+fn;
+  const sf=document.getElementById('s-folder-name'); if(sf) sf.textContent=fn;
+  startAutoRefresh();
+  refreshCurrentView();
+}
+function setSyncStatus(on,txt){
+  document.getElementById('sync-dot').className='sync-dot'+(on?' on':'');
+  const t=document.getElementById('sync-txt'); t.className='sync-txt'+(on?' on':''); t.textContent=txt;
+}
+
+// ===================== FILE SYSTEM =====================
+async function loadJobs(){
+  if(!dirHandle)return;
+  try{
+    const fh=await dirHandle.getFileHandle('jobs.json');
+    const file=await fh.getFile();
+    const data=JSON.parse(await file.text());
+    jobs=migrateJobs(data.jobs||[]);
+    lastTimestamp=data.lastUpdated||null;
+    const by=data.lastUpdatedBy||''; const ago=lastTimestamp?timeAgo(lastTimestamp):'';
+    if(ago&&by) document.getElementById('topbar-info').textContent='Updated '+ago+' by '+by;
+  }catch(e){
+    if(e.name==='NotFoundError'){
+      jobs=SEED.map(j=>({...j,files:[],created:new Date().toISOString()}));
+      await saveJobs('Setup');
+    }else console.error('Load error:',e);
+  }
+}
+
+// Migrate old data — handles installDate→range and ensures CO/activity arrays exist
+function migrateJobs(arr){
+  return arr.map(j=>{
+    const out={...j};
+    if(out.installDate&&!out.installStart){
+      out.installStart=out.installDate; out.installEnd=out.installDate; delete out.installDate;
+    }
+    out.installStart=out.installStart||'';
+    out.installEnd=out.installEnd||'';
+    out.crewSize=out.crewSize||1;
+    out.changeOrders=out.changeOrders||[];
+    out.activityLog=out.activityLog||[];
+    return out;
+  });
+}
+
+// Current contract value = original + all APPROVED COs
+function currentContractValue(j){
+  const base=parseFloat(j.value)||0;
+  const coTotal=(j.changeOrders||[]).filter(c=>c.status==='approved').reduce((s,c)=>s+(parseFloat(c.amount)||0),0);
+  return base+coTotal;
+}
+
+async function saveJobs(by){
+  if(!dirHandle)return;
+  const ts=new Date().toISOString();
+  try{
+    const fh=await dirHandle.getFileHandle('jobs.json',{create:true});
+    const w=await fh.createWritable();
+    await w.write(JSON.stringify({version:3,lastUpdated:ts,lastUpdatedBy:by||settings.userName||'Unknown',jobs},null,2));
+    await w.close();
+    lastTimestamp=ts;
+    document.getElementById('topbar-info').textContent='Saved just now by '+(by||settings.userName||'Unknown');
+  }catch(e){console.error('Save error:',e);alert('Error saving: '+e.message)}
+}
+
+async function saveFileToFolder(jobId,slotKey,file){
+  if(!dirHandle)return null;
+  try{
+    const fd=await dirHandle.getDirectoryHandle('files',{create:true});
+    const jd=await fd.getDirectoryHandle(jobId,{create:true});
+    const safeName=slotKey+'_'+file.name.replace(/[^a-zA-Z0-9._\- ]/g,'_');
+    const fh=await jd.getFileHandle(safeName,{create:true});
+    const w=await fh.createWritable(); await w.write(file); await w.close();
+    return{name:file.name,path:['files',jobId,safeName],size:file.size,slot:slotKey};
+  }catch(e){console.error('File save error:',e);alert('Error saving "'+file.name+'": '+e.message);return null}
+}
+
+async function openFileFromFolder(pathArr){
+  if(!dirHandle){alert('Not connected to folder.');return}
+  try{
+    let cur=dirHandle;
+    for(let i=0;i<pathArr.length-1;i++) cur=await cur.getDirectoryHandle(pathArr[i]);
+    const fh=await cur.getFileHandle(pathArr[pathArr.length-1]);
+    const file=await fh.getFile();
+    const url=URL.createObjectURL(file);
+    window.open(url,'_blank');
+    setTimeout(()=>URL.revokeObjectURL(url),20000);
+  }catch(e){alert('Could not open file. It may not have synced yet.\n\nPath: '+pathArr.join('/')+'\n\n'+e.message)}
+}
+
+// ===================== AUTO REFRESH =====================
+function startAutoRefresh(){
+  stopAutoRefresh();
+  autoRefreshTimer=setInterval(async()=>{
+    if(!dirHandle)return;
+    try{
+      const fh=await dirHandle.getFileHandle('jobs.json');
+      const data=JSON.parse(await(await fh.getFile()).text());
+      if(data.lastUpdated&&data.lastUpdated!==lastTimestamp){
+        jobs=migrateJobs(data.jobs||[]);
+        lastTimestamp=data.lastUpdated;
+        const by=data.lastUpdatedBy||'';
+        document.getElementById('topbar-info').textContent='Updated '+timeAgo(data.lastUpdated)+' by '+by;
+        refreshCurrentView();
+      }
+    }catch{/*silent*/}
+  },60000);
+}
+function stopAutoRefresh(){if(autoRefreshTimer){clearInterval(autoRefreshTimer);autoRefreshTimer=null}}
+async function manualRefresh(){
+  if(!dirHandle){alert('Not connected.');return}
+  const icon=document.getElementById('refresh-icon'); icon.classList.add('spinning');
+  await loadJobs(); refreshCurrentView();
+  setTimeout(()=>icon.classList.remove('spinning'),600);
+}
+function refreshCurrentView(){
+  if(document.getElementById('view-dashboard').classList.contains('active')) renderDashboard();
+  if(document.getElementById('view-jobs').classList.contains('active')) applyFilters();
+  if(document.getElementById('view-calendar').classList.contains('active')) renderCalendar();
+}
+
+// ===================== INIT =====================
+async function init(){
+  loadSettings();
+  const stored=await retrieveHandle();
+  if(stored){
+    const ok=await verifyPermission(stored);
+    if(ok){dirHandle=stored;await loadJobs();showConnected();if(!settings.userName)showNamePrompt();}
+    else document.getElementById('connect-screen').classList.remove('hidden');
+  }
+}
+
+// ===================== SETTINGS =====================
+function loadSettings(){
+  try{settings=JSON.parse(localStorage.getItem('fs-cfg-v2')||'{}')}catch{settings={}}
+  const sn=document.getElementById('s-name'); if(sn) sn.value=settings.userName||'';
+  const se=document.getElementById('s-em'); if(se) se.value=settings.em||'';
+}
+function saveSettings(){
+  settings.userName=document.getElementById('s-name').value.trim();
+  settings.em=document.getElementById('s-em').value.trim();
+  localStorage.setItem('fs-cfg-v2',JSON.stringify(settings));
+  const sv=document.getElementById('s-saved'); sv.style.display='inline';
+  setTimeout(()=>sv.style.display='none',2000);
+  const sf=document.getElementById('s-folder-name'); if(sf&&dirHandle) sf.textContent=dirHandle.name;
+}
+function openEM(){
+  const p=settings.em; if(!p){alert('No Estimating Master path set. Go to Settings.');return}
+  window.open(p.startsWith('http')?p:'file:///'+p.replace(/\\/g,'/'),'_blank');
+}
+
+// ===================== NAME PROMPT =====================
+function showNamePrompt(){document.getElementById('name-screen').classList.add('open')}
+function pickName(n,btn){pendingName=n;document.querySelectorAll('.name-opt').forEach(b=>b.classList.remove('sel'));btn.classList.add('sel');document.getElementById('custom-name').value=''}
+function pickNameCustom(){
+  const n=(document.getElementById('custom-name').value.trim()||pendingName).trim();
+  if(!n){alert('Please enter your name or pick one.');return}
+  settings.userName=n; localStorage.setItem('fs-cfg-v2',JSON.stringify(settings));
+  const sn=document.getElementById('s-name'); if(sn) sn.value=n;
+  document.getElementById('name-screen').classList.remove('open');
+}
+
+// ===================== UTILS =====================
+function fc(v){if(!v&&v!==0)return'—';if(v===0)return'—';return'$'+v.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2})}
+function fd(s){if(!s)return'—';const p=s.split('-');if(p.length!==3)return s;return MONTHS_S[+p[1]-1]+' '+parseInt(p[2])+', '+p[0]}
+function fdShort(s){if(!s)return'—';const p=s.split('-');if(p.length!==3)return s;return MONTHS_S[+p[1]-1]+' '+parseInt(p[2])}
+// Format install window for display
+function fdRange(j){
+  const s=j.installStart||j.installDate;
+  const e=j.installEnd;
+  if(!s)return'—';
+  if(!e||e===s)return fd(s);
+  const dur=getDuration(s,e);
+  return fdShort(s)+' → '+fdShort(e)+(dur>1?' ('+dur+' days)':'');
+}
+function fdRangeShort(j){
+  const s=j.installStart||j.installDate;
+  const e=j.installEnd;
+  if(!s)return'—';
+  if(!e||e===s)return fdShort(s);
+  return fdShort(s)+'–'+fdShort(e);
+}
+function getDuration(start,end){
+  if(!start||!end)return 1;
+  const s=new Date(start+'T12:00:00'), e=new Date(end+'T12:00:00');
+  return Math.max(1,Math.round((e-s)/864e5)+1);
+}
+function sb(st){const c=SC[st]||SC.active;return`<span class="badge ${c.cls}">${c.label}</span>`}
+function pb(pm){return`<span class="pm-dot pm-${pm}" title="${(PM[pm]||{name:pm}).name}">${pm}</span>`}
+function fz(b){if(!b)return'';if(b<1024)return b+'B';if(b<1048576)return Math.round(b/1024)+'KB';return(b/1048576).toFixed(1)+'MB'}
+function sortJobs(arr){return arr.slice().sort((a,b)=>parseInt(a.id.replace(/\D/g,''))-parseInt(b.id.replace(/\D/g,'')))}
+function timeAgo(iso){const d=(Date.now()-new Date(iso).getTime())/1000;if(d<60)return'just now';if(d<3600)return Math.floor(d/60)+' min ago';if(d<86400)return Math.floor(d/3600)+' hr ago';return Math.floor(d/86400)+' days ago'}
+function getInstallStart(j){return j.installStart||j.installDate||''}
+
+// Build day map: date string → [jobs] (expands ranges across all days in span)
+function buildDayMap(){
+  const m={};
+  jobs.forEach(j=>{
+    const s=getInstallStart(j); if(!s||j.status==='void')return;
+    const end=j.installEnd||s;
+    const sd=new Date(s+'T12:00:00'), ed=new Date(end+'T12:00:00');
+    for(let d=new Date(sd);d<=ed;d.setDate(d.getDate()+1)){
+      const k=d.toISOString().split('T')[0];
+      if(!m[k])m[k]=[];
+      if(!m[k].find(x=>x.id===j.id))m[k].push(j);
+    }
+  });
+  return m;
+}
+
+// Get total crew on a given day
+function dayCrewTotal(dayJobs){return dayJobs.reduce((s,j)=>s+(parseInt(j.crewSize)||1),0)}
+
+// Capacity CSS class based on crew count
+function capClass(crew){
+  if(crew===0)return'';
+  if(crew<=2)return'cap-lt';
+  if(crew<=5)return'cap-md';
+  if(crew<=8)return'cap-hv';
+  return'cap-mx';
+}
+
+// Monthly capacity summary
+function monthSummary(y,m){
+  const firstDay=new Date(y,m,1), lastDay=new Date(y,m+1,0);
+  const jobsThisMonth=new Set(); let totalCrewDays=0;
+  jobs.forEach(j=>{
+    const s=getInstallStart(j); if(!s||j.status==='void')return;
+    const sd=new Date(s+'T12:00:00'), ed=new Date((j.installEnd||s)+'T12:00:00');
+    if(sd>lastDay||ed<firstDay)return;
+    jobsThisMonth.add(j.id);
+    const lo=new Date(Math.max(sd,firstDay)), hi=new Date(Math.min(ed,lastDay));
+    for(let d=new Date(lo);d<=hi;d.setDate(d.getDate()+1)){
+      totalCrewDays+=parseInt(j.crewSize)||1;
+    }
+  });
+  return{jobs:jobsThisMonth.size,crewDays:totalCrewDays};
+}
+
+// ===================== NAVIGATION =====================
+function nav(v,el){
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  if(el) el.classList.add('active');
+  if(v==='dashboard') renderDashboard();
+  if(v==='jobs') applyFilters();
+  if(v==='calendar') renderCalendar();
+  if(v==='settings') loadSettings();
+}
+
+// ===================== DASHBOARD =====================
+function renderDashboard(){
+  const active=jobs.filter(j=>j.status!=='void'&&j.status!=='installed'&&j.status!=='completed');
+  const ip=jobs.filter(j=>j.status==='active');
+  const done=jobs.filter(j=>j.status==='completed'||j.status==='installed');
+  const rev=jobs.filter(j=>j.status!=='void').reduce((s,j)=>s+currentContractValue(j),0);
+  const now=new Date();
+
+  // Jobs with install windows that overlap the next 21 days
+  const soon=jobs.filter(j=>{
+    const s=getInstallStart(j); if(!s||j.status==='void')return false;
+    const sd=new Date(s+'T12:00:00');
+    const ed=new Date((j.installEnd||s)+'T12:00:00');
+    const diffStart=(sd-now)/864e5;
+    return diffStart<=-1?ed>=now:(diffStart<=21);
+  }).sort((a,b)=>getInstallStart(a).localeCompare(getInstallStart(b)));
+
+  document.getElementById('dash-sub').textContent=`${active.length} active · ${ip.length} in progress · ${done.length} completed`;
+  document.getElementById('stats').innerHTML=`
+    <div class="sc blue"><div class="sc-lbl">Active Jobs</div><div class="sc-val">${active.length}</div><div class="sc-sub">${ip.length} currently in progress</div></div>
+    <div class="sc"><div class="sc-lbl">Installing ≤ 21 Days</div><div class="sc-val">${soon.length}</div><div class="sc-sub">${soon.length?'Next: '+fdShort(getInstallStart(soon[0])):'No installs scheduled yet'}</div></div>
+    <div class="sc"><div class="sc-lbl">Completed / Installed</div><div class="sc-val">${done.length}</div><div class="sc-sub">This year</div></div>
+    <div class="sc"><div class="sc-lbl">YTD Revenue</div><div class="sc-val" style="font-size:22px">${fc(rev)}</div><div class="sc-sub">${jobs.filter(j=>j.value>0&&j.status!=='void').length} jobs with values</div></div>
+  `;
+
+  document.getElementById('upc-list').innerHTML=soon.length?soon.slice(0,6).map(j=>{
+    const s=getInstallStart(j); const d=new Date(s+'T12:00:00');
+    const pm=PM[j.pm]||{color:'#6366f1',name:j.pm};
+    const dur=getDuration(s,j.installEnd||s);
+    const range=fdRangeShort(j);
+    return`<div class="upc" onclick="showDetail('${j.id}')">
+      <div class="upc-dt" style="background:${pm.color}18;border:1px solid ${pm.color}44">
+        <div class="upc-day">${d.getDate()}</div>
+        <div class="upc-mon" style="color:${pm.color}">${MONTHS_S[d.getMonth()]}</div>
+      </div>
+      <div class="upc-info">
+        <div class="upc-id">${j.id} · ${pm.name} · ${range}${dur>1?' · '+dur+' days':''}</div>
+        <div class="upc-name">${j.client}</div>
+        <div class="upc-desc">${j.project||'—'} · <span class="crew-tag">👷 ${j.crewSize||1}</span></div>
+      </div>${sb(j.status)}</div>`;
+  }).join(''):'<div class="empty"><p>No installs in the next 21 days.<br><small style="font-size:12px">Add install windows to jobs to see them here.</small></p></div>';
+
+  document.getElementById('ip-list').innerHTML=ip.length?ip.slice(0,6).map(j=>`
+    <div class="upc" onclick="showDetail('${j.id}')">
+      ${pb(j.pm)}
+      <div class="upc-info">
+        <div class="upc-id">${j.id}</div>
+        <div class="upc-name">${j.client}</div>
+        <div class="upc-desc">${j.project||'—'}${j.value?' · '+fc(j.value):''}</div>
+      </div>
+      ${getInstallStart(j)?`<div style="text-align:right;font-size:12px;color:#64748b;white-space:nowrap">Install<br><strong>${fdRangeShort(j)}</strong></div>`:''}
+    </div>`).join(''):'<div class="empty"><p>No jobs currently in progress.</p></div>';
+}
+
+// ===================== JOBS TABLE =====================
+function applyFilters(){
+  const s=(document.getElementById('srch')||{value:''}).value.toLowerCase();
+  const pm=(document.getElementById('fpm')||{value:''}).value;
+  const st=(document.getElementById('fst')||{value:''}).value;
+  const f=sortJobs(jobs).filter(j=>{
+    if(pm&&j.pm!==pm)return false;
+    if(st&&j.status!==st)return false;
+    if(s&&!(j.id+j.client+j.project+j.gc+j.notes).toLowerCase().includes(s))return false;
+    return true;
+  });
+  const ct=document.getElementById('jobs-ct'); if(ct) ct.textContent=`${f.length} of ${jobs.length} jobs`;
+  const sub=document.getElementById('jobs-sub'); if(sub) sub.textContent=`${jobs.filter(j=>j.status!=='void').length} active · ${jobs.filter(j=>j.status==='void').length} void`;
+  const tb=document.getElementById('jtbody'); if(!tb)return;
+  tb.innerHTML=f.length?f.map(j=>{
+    const fc2=(j.files||[]).length;
+    const cv=currentContractValue(j);
+    const approvedCOs=(j.changeOrders||[]).filter(c=>c.status==='approved').length;
+    const hasCO=approvedCOs>0;
+    return`<tr onclick="showDetail('${j.id}')">
+      <td><span class="t-num">${j.id}</span></td>
+      <td><span class="t-client">${j.client}</span></td>
+      <td><span class="t-proj">${j.project||'—'}</span></td>
+      <td style="display:flex;align-items:center;gap:8px">${pb(j.pm)}<span style="font-size:13px;color:#64748b">${(PM[j.pm]||{name:j.pm}).name}</span></td>
+      <td>${sb(j.status)}</td>
+      <td class="t-val${hasCO?' val-has-co':''}">${fc(cv)}${hasCO?`<span class="co-badge">+${approvedCOs} CO</span>`:''}</td>
+      <td style="color:#475569;font-size:13px;white-space:nowrap">${fdRange(j)}</td>
+      <td style="text-align:center"><span class="crew-tag">👷 ${j.crewSize||1}</span></td>
+      <td style="text-align:center">${fc2?`<span style="background:#dbeafe;color:#1e40af;border-radius:10px;padding:3px 9px;font-size:12px;font-weight:800">📎 ${fc2}</span>`:'<span style="color:#cbd5e1">—</span>'}</td>
+    </tr>`;
+  }).join(''):'<tr><td colspan="9"><div class="empty"><p>No jobs match your filters.</p></div></td></tr>';
+}
+
+// ===================== CALENDAR =====================
+function renderCalendar(){
+  document.getElementById('cal-ttl').textContent=MONTHS[calM]+' '+calY;
+  const today=new Date();
+  const firstDay=new Date(calY,calM,1).getDay();
+  const dim=new Date(calY,calM+1,0).getDate();
+  const pmd=new Date(calY,calM,0).getDate();
+  const dayMap=buildDayMap();
+
+  // Capacity summary bar
+  const summary=monthSummary(calY,calM);
+  const capEl=document.getElementById('cal-cap');
+  if(summary.jobs===0){
+    capEl.innerHTML=`<div class="cal-cap-info">No installs scheduled in <strong>${MONTHS[calM]}</strong></div>`;
+  }else{
+    // Color the capacity level
+    let capColor='#059669', capLbl='Light load', capPct=Math.min(100,summary.crewDays*2);
+    if(summary.crewDays>30){capColor='#dc2626';capLbl='Very busy'}
+    else if(summary.crewDays>20){capColor='#ea580c';capLbl='Heavy load'}
+    else if(summary.crewDays>10){capColor='#d97706';capLbl='Moderate'}
+    capEl.innerHTML=`
+      <div class="cal-cap-info"><strong>${MONTHS[calM]} ${calY}</strong> — ${summary.jobs} job${summary.jobs!==1?'s':''} installing · <strong>${summary.crewDays}</strong> crew-days booked</div>
+      <div class="cap-meter">
+        <div class="cap-bar-wrap"><div class="cap-bar-fill" style="width:${capPct}%;background:${capColor}"></div></div>
+        <span class="cap-label" style="color:${capColor}">${capLbl}</span>
+      </div>`;
+  }
+
+  // Calendar grid
+  let html='';
+  for(let i=firstDay-1;i>=0;i--) html+=`<div class="cc om"><div class="cd">${pmd-i}</div></div>`;
+  for(let d=1;d<=dim;d++){
+    const ds=calY+'-'+String(calM+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const isT=today.getFullYear()===calY&&today.getMonth()===calM&&today.getDate()===d;
+    const dj=dayMap[ds]||[];
+    const crew=dayCrewTotal(dj);
+    const cap=capClass(crew);
+    const pills=dj.slice(0,3).map(j=>`<div class="cpill cp-${j.pm}" onclick="event.stopPropagation();showDetail('${j.id}')" title="${j.client} — ${j.project} (${j.crewSize||1} crew)">${j.id}: ${j.client}</div>`).join('');
+    const more=dj.length>3?`<div style="font-size:10px;color:#94a3b8;padding:1px 5px">+${dj.length-3} more</div>`:'';
+    const crewTag=crew>0?`<div style="position:absolute;top:6px;right:6px;font-size:10px;font-weight:800;color:${crew>8?'#dc2626':crew>5?'#ea580c':crew>2?'#d97706':'#059669'}">👷${crew}</div>`:'';
+    html+=`<div class="cc${isT?' td':''} ${cap}" style="position:relative">
+      <div class="cd">${d}</div>
+      ${crewTag}
+      ${pills}${more}
+    </div>`;
+  }
+  const rem=(7-((firstDay+dim)%7))%7;
+  for(let d=1;d<=rem;d++) html+=`<div class="cc om"><div class="cd">${d}</div></div>`;
+  document.getElementById('cal-grid').innerHTML=html;
+}
+function calNav(dir){calM+=dir;if(calM<0){calM=11;calY--}if(calM>11){calM=0;calY++}renderCalendar()}
+
+// ===================== JOB DETAIL =====================
+async function showDetail(id){
+  activeJob=id;
+  const j=jobs.find(x=>x.id===id); if(!j)return;
+  const pm=PM[j.pm]||{name:j.pm,color:'#6366f1'};
+  const dur=getDuration(getInstallStart(j),j.installEnd||getInstallStart(j));
+  const cv=currentContractValue(j);
+  const coApproved=(j.changeOrders||[]).filter(c=>c.status==='approved').reduce((s,c)=>s+(parseFloat(c.amount)||0),0);
+  document.getElementById('d-title').textContent=j.id+' — '+j.client;
+  document.getElementById('d-sub').textContent=j.project||'';
+
+  const statBtns=['ready','active','completed','installed'].map(s=>{
+    const c=SC[s]; const on=j.status===s;
+    return`<button class="sbtn${on?' on':''}" style="background:${on?c.color+'22':'#f8fafc'};color:${c.color};border-color:${on?c.color:'#e2e8f0'}" onclick="setStatus('${id}','${s}')">${c.label}</button>`;
+  }).join('');
+
+  const fdocs=(j.files||[]).length?
+    FILE_SLOTS.map(sl=>{
+      const f=(j.files||[]).find(x=>x.slot===sl.key);
+      if(f)return`<div style="display:flex;align-items:center;gap:10px;padding:11px 13px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;cursor:pointer" onclick="openFileFromFolder(${JSON.stringify(f.path)})">
+        <span style="font-size:18px">${sl.icon}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#64748b">${sl.label}</div>
+          <div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${f.name}</div>
+          <div style="font-size:11px;color:#10b981">${fz(f.size)} · Click to open</div>
+        </div><span style="color:#10b981;font-size:18px">✓</span>
+      </div>`;
+      return`<div style="padding:11px 13px;background:#f8fafc;border:1.5px dashed #e2e8f0;border-radius:8px;opacity:.6">
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8">${sl.label}</div>
+        <div style="font-size:12px;color:#cbd5e1">No file attached</div>
+      </div>`;
+    }).join('')
+    :'<div style="grid-column:1/-1;text-align:center;padding:20px;color:#94a3b8;font-size:13px">No documents attached. Click Edit Job to add files.</div>';
+
+  document.getElementById('d-body').innerHTML=`
+    <div class="dmg">
+      <div class="dmi"><div class="dlbl">Project Manager</div><div class="dval" style="display:flex;align-items:center;gap:8px">${pb(j.pm)} ${pm.name}</div></div>
+      <div class="dmi"><div class="dlbl">Status</div><div class="dval">${sb(j.status)}</div></div>
+      <div class="dmi"><div class="dlbl">Contract Value</div><div class="dval" style="${coApproved!==0?'color:#059669':''}">
+        ${fc(cv)}${coApproved!==0?`<div style="font-size:11px;color:#94a3b8;font-weight:400;margin-top:1px">orig. ${fc(j.value)}${coApproved>0?' +':' '}${fc(Math.abs(coApproved))} CO</div>`:''}
+      </div></div>
+      <div class="dmi"><div class="dlbl">Install Start</div><div class="dval">${fd(getInstallStart(j))}</div></div>
+      <div class="dmi"><div class="dlbl">Install End</div><div class="dval">${j.installEnd&&j.installEnd!==getInstallStart(j)?fd(j.installEnd):'Same day'}</div></div>
+      <div class="dmi"><div class="dlbl">Duration & Crew</div><div class="dval">${dur} day${dur!==1?'s':''} · <span class="crew-tag" style="font-size:14px">👷 ${j.crewSize||1} installer${(j.crewSize||1)!==1?'s':''}</span></div></div>
+      <div class="dmi"><div class="dlbl">GC / Contractor</div><div class="dval" style="font-size:14px">${j.gc||'—'}</div></div>
+      <div class="dmi"><div class="dlbl">Job Number</div><div class="dval" style="font-family:monospace">${j.id}</div></div>
+    </div>
+    ${j.notes?`<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px 14px;margin-bottom:18px"><div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#92400e;margin-bottom:4px">Notes</div><div style="font-size:14px;color:#78350f">${j.notes}</div></div>`:''}
+    <div style="margin-bottom:20px">
+      <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#475569;margin-bottom:10px">Update Status</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">${statBtns}</div>
+    </div>
+    <div>
+      <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#475569;margin-bottom:10px">📎 Job Documents</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${fdocs}</div>
+    </div>
+
+    <!-- CHANGE ORDERS -->
+    <div class="co-wrap">
+      <div class="sec-ttl">💰 Change Orders</div>
+      <div class="co-summary-box">
+        <div><div class="co-orig-lbl">Original Contract</div><div style="font-size:16px;font-weight:800;color:#1e293b">${fc(j.value)}</div></div>
+        <div style="font-size:20px;color:#cbd5e1">→</div>
+        <div><div class="co-orig-lbl">Current Contract</div><div class="co-curr-val">${fc(cv)}</div></div>
+        ${coApproved!==0?`<div class="co-delta-lbl" style="margin-left:auto">CO total: <strong style="color:${coApproved>=0?'#059669':'#ef4444'}">${coApproved>=0?'+':''}${fc(coApproved)}</strong></div>`:''}
+      </div>
+      <div class="co-list" id="co-list-${id}"></div>
+      <div class="co-add-form">
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#64748b;margin-bottom:8px">Add Change Order</div>
+        <div class="co-add-row">
+          <input type="text" id="co-desc-${id}" placeholder="Description (e.g. Added blocking per RFI-4)">
+          <input type="number" id="co-amt-${id}" placeholder="Amount (+/−)" step="0.01">
+          <select id="co-st-${id}">
+            <option value="submitted">Submitted</option>
+            <option value="approved">Approved</option>
+          </select>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="addCO('${id}')">+ Add Change Order</button>
+      </div>
+    </div>
+
+    <!-- ACTIVITY LOG -->
+    <div class="alog-wrap">
+      <div class="sec-ttl">📝 Activity Log</div>
+      <div class="alog-list" id="alog-list-${id}"></div>
+      <div class="alog-add">
+        <textarea id="alog-txt-${id}" placeholder="Post a note… (e.g. Delivered boxes to site, 3rd floor staging)"></textarea>
+        <button class="btn btn-primary btn-sm" onclick="addNote('${id}')">Post</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('m-detail').classList.add('open');
+  renderCOList(id);
+  renderALog(id);
+}
+
+async function setStatus(id,st){
+  const j=jobs.find(x=>x.id===id); if(!j)return;
+  j.status=st; await saveJobs(settings.userName);
+  showDetail(id); refreshCurrentView();
+}
+
+// ===================== INSTALL DATE RANGE CALC =====================
+function calcEnd(){
+  const start=document.getElementById('f-start').value;
+  const dur=parseInt(document.getElementById('f-dur').value);
+  if(start&&dur>0){
+    const d=new Date(start+'T12:00:00');
+    d.setDate(d.getDate()+dur-1);
+    document.getElementById('f-end').value=d.toISOString().split('T')[0];
+  }
+}
+function calcDur(){
+  const start=document.getElementById('f-start').value;
+  const end=document.getElementById('f-end').value;
+  if(start&&end){
+    const dur=getDuration(start,end);
+    if(dur>0) document.getElementById('f-dur').value=dur;
+  }
+}
+
+// ===================== ADD / EDIT =====================
+function openAdd(){
+  editingId=null;
+  document.getElementById('mj-title').textContent='New Job';
+  const nums=jobs.map(j=>parseInt(j.id.replace(/\D/g,''))).filter(n=>!isNaN(n));
+  const next=(nums.length?Math.max(...nums)+1:47).toString().padStart(3,'0');
+  document.getElementById('f-num').value='G'+next;
+  document.getElementById('f-pm').value='G';
+  document.getElementById('f-client').value='';
+  document.getElementById('f-proj').value='';
+  document.getElementById('f-status').value='ready';
+  document.getElementById('f-val').value='';
+  document.getElementById('f-start').value='';
+  document.getElementById('f-end').value='';
+  document.getElementById('f-dur').value='';
+  document.getElementById('f-crew').value='2';
+  document.getElementById('f-gc').value='';
+  document.getElementById('f-notes').value='';
+  pf={};renderSlots();
+  document.getElementById('m-job').classList.add('open');
+}
+
+function openEdit(id){
+  closeModal('m-detail'); editingId=id;
+  const j=jobs.find(x=>x.id===id); if(!j)return;
+  document.getElementById('mj-title').textContent='Edit Job — '+id;
+  document.getElementById('f-num').value=j.id;
+  document.getElementById('f-pm').value=j.pm||'G';
+  document.getElementById('f-client').value=j.client||'';
+  document.getElementById('f-proj').value=j.project||'';
+  document.getElementById('f-status').value=j.status||'active';
+  document.getElementById('f-val').value=j.value||'';
+  const s=getInstallStart(j);
+  document.getElementById('f-start').value=s||'';
+  document.getElementById('f-end').value=j.installEnd||'';
+  document.getElementById('f-dur').value=s&&j.installEnd?getDuration(s,j.installEnd):'';
+  document.getElementById('f-crew').value=String(j.crewSize||2);
+  document.getElementById('f-gc').value=j.gc||'';
+  document.getElementById('f-notes').value=j.notes||'';
+  pf={};renderSlots();
+  document.getElementById('m-job').classList.add('open');
+}
+
+function pmChanged(){
+  const pm=document.getElementById('f-pm').value;
+  const cur=document.getElementById('f-num').value;
+  if(!editingId&&pm&&cur) document.getElementById('f-num').value=pm+cur.replace(/^[A-Za-z]/,'');
+}
+
+function renderSlots(){
+  document.getElementById('fslots').innerHTML=FILE_SLOTS.map(sl=>{
+    const p=pf[sl.key];
+    return`<label class="fslot${p?' filled':''}" id="sl-${sl.key}">
+      <input type="file" accept=".pdf,.jpg,.jpeg,.png,.docx,.xlsx,.dwg,.zip,.msg" onchange="fileChosen(event,'${sl.key}')">
+      <div class="fsl-lbl">${sl.icon} ${sl.label}</div>
+      ${p?`<div class="fsl-name">${p.name}</div><div class="fsl-size">${fz(p.size)} · ready to upload</div><button class="fsl-rm" onclick="event.preventDefault();rmFile('${sl.key}')">✕</button>`
+        :`<div class="fsl-empty">Click to attach</div>`}
+    </label>`;
+  }).join('');
+}
+function fileChosen(e,k){
+  const f=e.target.files[0]; if(!f)return;
+  if(f.size>200*1024*1024){alert('File larger than 200MB. Please compress it first.');return}
+  pf[k]={name:f.name,size:f.size,file:f}; renderSlots();
+}
+function rmFile(k){delete pf[k];renderSlots()}
+
+async function saveJob(){
+  const num=document.getElementById('f-num').value.trim().toUpperCase();
+  const pm=document.getElementById('f-pm').value;
+  const client=document.getElementById('f-client').value.trim();
+  if(!num||!pm||!client){alert('Please fill in Job Number, PM, and Client.');return}
+  if(!editingId&&jobs.find(j=>j.id===num)){alert(`Job ${num} already exists.`);return}
+  const saveBtn=document.getElementById('save-btn');
+  saveBtn.textContent='Saving...'; saveBtn.disabled=true;
+  try{
+    const existing=editingId?jobs.find(j=>j.id===editingId):null;
+    const startVal=document.getElementById('f-start').value;
+    const endVal=document.getElementById('f-end').value||startVal;
+    const jd={
+      id:num, pm, client:client.toUpperCase(),
+      project:document.getElementById('f-proj').value.trim(),
+      status:document.getElementById('f-status').value,
+      value:parseFloat(document.getElementById('f-val').value)||0,
+      installStart:startVal, installEnd:endVal,
+      crewSize:parseInt(document.getElementById('f-crew').value)||1,
+      gc:document.getElementById('f-gc').value.trim(),
+      notes:document.getElementById('f-notes').value.trim(),
+      files:existing?[...(existing.files||[])]:[ ],
+      changeOrders:existing?(existing.changeOrders||[]):[],
+      activityLog:existing?(existing.activityLog||[]):[],
+      created:existing?existing.created:new Date().toISOString(),
+      updated:new Date().toISOString()
+    };
+    for(const[k,p] of Object.entries(pf)){
+      const result=await saveFileToFolder(jd.id,k,p.file);
+      if(result){
+        const idx=jd.files.findIndex(f=>f.slot===k);
+        if(idx>=0)jd.files[idx]=result; else jd.files.push(result);
+      }
+    }
+    if(editingId){const i=jobs.findIndex(j=>j.id===editingId);if(i>=0)jobs[i]=jd}
+    else jobs.push(jd);
+    await saveJobs(settings.userName);
+    closeModal('m-job'); pf={};
+    refreshCurrentView();
+    if(!editingId) setTimeout(()=>showDetail(num),200);
+    editingId=null;
+  }finally{saveBtn.textContent='Save Job';saveBtn.disabled=false}
+}
+
+// ===================== MODALS =====================
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+function backdropClose(e,id){if(e.target===document.getElementById(id))closeModal(id)}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal('m-detail');closeModal('m-job')}});
+
+// ===================== CHANGE ORDERS =====================
+function renderCOList(id){
+  const j=jobs.find(x=>x.id===id); const el=document.getElementById('co-list-'+id);
+  if(!j||!el)return;
+  const cos=j.changeOrders||[];
+  if(!cos.length){el.innerHTML='<div style="font-size:13px;color:#94a3b8;padding:4px 0 8px">No change orders yet.</div>';return;}
+  el.innerHTML=cos.map((co,i)=>{
+    const amt=parseFloat(co.amount)||0;
+    const isApv=co.status==='approved';
+    return`<div class="co-item">
+      <div class="co-n">CO ${i+1}</div>
+      <div class="co-body">
+        <div class="co-desc-txt">${co.description||'—'}</div>
+        <div class="co-meta-row">
+          <span>${co.date||''}${co.by?' · by '+co.by:''}</span>
+          <span class="co-st ${isApv?'apv':'sub'}">${isApv?'✅ Approved':'⏳ Submitted'}</span>
+        </div>
+      </div>
+      <div class="co-right">
+        <div class="co-amt-val ${amt>=0?'pos':'neg'}">${amt>=0?'+':''}${fc(amt)}</div>
+        <div class="co-actions">
+          ${!isApv?`<button class="co-btn approve" onclick="approveCO('${id}',${i})">Approve</button>`:''}
+          <button class="co-btn rm" onclick="removeCO('${id}',${i})">✕</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function addCO(id){
+  const desc=(document.getElementById('co-desc-'+id)||{value:''}).value.trim();
+  const amt=parseFloat((document.getElementById('co-amt-'+id)||{value:0}).value)||0;
+  const status=(document.getElementById('co-st-'+id)||{value:'submitted'}).value;
+  if(!desc){alert('Please enter a description for the change order.');return;}
+  const j=jobs.find(x=>x.id===id); if(!j)return;
+  j.changeOrders=j.changeOrders||[];
+  const co={description:desc,amount:amt,status,by:settings.userName||'Unknown',date:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}),created:new Date().toISOString()};
+  j.changeOrders.push(co);
+  // Mirror to activity log
+  j.activityLog=j.activityLog||[];
+  j.activityLog.unshift({note:`Change order added: "${desc}" ${amt>=0?'+':''}${fc(amt)} — ${status}`,by:settings.userName||'Unknown',created:new Date().toISOString()});
+  await saveJobs(settings.userName);
+  const inp=document.getElementById('co-desc-'+id); if(inp)inp.value='';
+  const amtI=document.getElementById('co-amt-'+id); if(amtI)amtI.value='';
+  renderCOList(id); renderALog(id);
+  // Refresh summary values in modal without full re-open
+  const cv=currentContractValue(j);
+  const coApproved=(j.changeOrders||[]).filter(c=>c.status==='approved').reduce((s,c)=>s+(parseFloat(c.amount)||0),0);
+  const currEl=document.querySelector('.co-curr-val'); if(currEl)currEl.textContent=fc(cv);
+}
+
+async function approveCO(id,idx){
+  const j=jobs.find(x=>x.id===id); if(!j)return;
+  j.changeOrders[idx].status='approved';
+  j.activityLog=j.activityLog||[];
+  j.activityLog.unshift({note:`CO #${idx+1} approved: "${j.changeOrders[idx].description}" (${fc(j.changeOrders[idx].amount)})`,by:settings.userName||'Unknown',created:new Date().toISOString()});
+  await saveJobs(settings.userName);
+  renderCOList(id); renderALog(id);
+  const cv=currentContractValue(j);
+  const currEl=document.querySelector('.co-curr-val'); if(currEl)currEl.textContent=fc(cv);
+}
+
+async function removeCO(id,idx){
+  if(!confirm('Remove this change order?'))return;
+  const j=jobs.find(x=>x.id===id); if(!j)return;
+  j.changeOrders.splice(idx,1);
+  await saveJobs(settings.userName);
+  renderCOList(id);
+  const cv=currentContractValue(j);
+  const currEl=document.querySelector('.co-curr-val'); if(currEl)currEl.textContent=fc(cv);
+}
+
+// ===================== ACTIVITY LOG =====================
+// Avatar color based on name initial
+function avatarStyle(name){
+  const colors=[['#e0e7ff','#3730a3'],['#fef3c7','#92400e'],['#dcfce7','#166534'],['#fce7f3','#9d174d'],['#fff7ed','#9a3412']];
+  const i=(name||'?').charCodeAt(0)%colors.length;
+  return`background:${colors[i][0]};color:${colors[i][1]}`;
+}
+
+function renderALog(id){
+  const j=jobs.find(x=>x.id===id); const el=document.getElementById('alog-list-'+id);
+  if(!j||!el)return;
+  const log=j.activityLog||[];
+  if(!log.length){el.innerHTML='<div style="font-size:13px;color:#94a3b8;padding:8px 0">No activity yet. Post a note below.</div>';return;}
+  el.innerHTML=log.map(entry=>{
+    const name=entry.by||'?';
+    const initials=name.substring(0,2).toUpperCase();
+    const ts=entry.created?new Date(entry.created).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'';
+    return`<div class="alog-item">
+      <div class="alog-av" style="${avatarStyle(name)}">${initials}</div>
+      <div class="alog-content">
+        <div class="alog-text">${entry.note||''}</div>
+        <div class="alog-meta">${name} · ${ts}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function addNote(id){
+  const ta=document.getElementById('alog-txt-'+id); if(!ta)return;
+  const note=ta.value.trim();
+  if(!note){alert('Please enter a note before posting.');return;}
+  const j=jobs.find(x=>x.id===id); if(!j)return;
+  j.activityLog=j.activityLog||[];
+  j.activityLog.unshift({note,by:settings.userName||'Unknown',created:new Date().toISOString()});
+  await saveJobs(settings.userName);
+  ta.value='';
+  renderALog(id);
+}
+
+// ===================== GO =====================
+init().catch(console.error);
+</script>
+</body>
+</html>
