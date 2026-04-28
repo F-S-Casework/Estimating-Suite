@@ -19,6 +19,7 @@ const Icon = {
   back:     () => <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M10 4L6 8l4 4M6 8h7"/></svg>,
   filter:   () => <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M2 4h12l-5 6v4l-2-1v-3z"/></svg>,
   dl:       () => <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M8 2v9M4 7l4 4 4-4M3 14h10"/></svg>,
+  history:  () => <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M3 8a5 5 0 1 0 1.5-3.5L3 6"/><path d="M3 3v3h3"/><path d="M8 5v3l2 1.5"/></svg>,
 };
 
 const NAV = [
@@ -34,6 +35,7 @@ const NAV = [
   { id:'docs',     label:'Documents',      group:'Data' },
   { id:'reports',  label:'Reports',        group:'Insight' },
   { id:'margin',   label:'Margin Analysis',group:'Insight' },
+  { id:'bidhistory',label:'Bid History',   group:'Insight' },
 ];
 
 function Rail({ active, onGo }) {
@@ -41,7 +43,7 @@ function Rail({ active, onGo }) {
   NAV.forEach(n => { (groups[n.group] ||= []).push(n); });
   const iconFor = (id) => {
     const map = { home:Icon.home, pipeline:Icon.pipeline, estimator:Icon.bids, jobs:Icon.jobs, job:Icon.jobs, co:Icon.bids,
-      calendar:Icon.calendar, library:Icon.library, contacts:Icon.contacts, docs:Icon.docs, reports:Icon.reports, margin:Icon.margin };
+      calendar:Icon.calendar, library:Icon.library, contacts:Icon.contacts, docs:Icon.docs, reports:Icon.reports, margin:Icon.margin, bidhistory:Icon.history };
     return (map[id] || Icon.bids)();
   };
   return (
@@ -102,6 +104,7 @@ function App() {
       case 'jobs': return <><b>Jobs</b> <span className="sep">/</span> <span>Active · 2026</span></>;
       case 'job': return <><span>Jobs</span> <span className="sep">/</span> <b>Ada Co. Courthouse · 26-040</b></>;
       case 'co': return <><span>Jobs</span> <span className="sep">/</span> <span>Ada Co. Courthouse</span> <span className="sep">/</span> <b>Change Orders</b></>;
+      case 'bidhistory': return <><span>Insight</span> <span className="sep">/</span> <b>Bid History &amp; Comparison</b></>;
       default: return <b>{NAV.find(n=>n.id===active)?.label || 'Home'}</b>;
     }
   }, [active]);
