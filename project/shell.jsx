@@ -88,13 +88,19 @@ function Topbar({ crumb, actions }) {
   );
 }
 
-function App() {
+function AuthenticatedApp({ session }) {
   const [active, setActive] = useState(() => {
     try { return localStorage.getItem('fs-view') || 'home'; } catch { return 'home'; }
   });
   const go = (id) => { setActive(id); try { localStorage.setItem('fs-view', id); } catch {} };
-  // expose globally so child views can navigate
   useEffect(() => { window.__go = go; }, []);
+
+  // Derive initials from email (e.g. "evan.pruitt@fs.com" → "EP")
+  const initials = useMemo(() => {
+    const email = session?.user?.email || '';
+    const parts = email.split('@')[0].split(/[._-]/);
+    return parts.slice(0, 2).map(p => p[0]?.toUpperCase() || '').join('') || 'U';
+  }, [session]);
 
   const crumb = useMemo(() => {
     switch (active) {
@@ -145,9 +151,13 @@ function App() {
 
   const View = window.Views?.[active] || window.Views?.home;
 
+  async function handleLogout() {
+    await window.sb.auth.signOut();
+  }
+
   return (
     <div id="app">
-      <Topbar crumb={crumb} actions={actions} />
+      <Topbar crumb={crumb} actions={actions} initials={initials} onLogout={handleLogout} />
       <div id="main">
         <Rail active={active} onGo={go} />
         <main id="content">
@@ -156,6 +166,21 @@ function App() {
       </div>
     </div>
   );
+}
+
+function App() {
+  const [session, setSession] = useState(undefined);
+
+  useEffect(() => {
+    const { data: { subscription } } = window.sb.auth.onAuthStateChange((_event, s) => {
+      setSession(s);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  if (session === undefined) return null;
+  if (!session) return <LoginView />;
+  return <AuthenticatedApp session={session} />;
 }
 
 window.App = App;
