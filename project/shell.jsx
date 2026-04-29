@@ -68,7 +68,8 @@ function Rail({ active, onGo }) {
   );
 }
 
-function Topbar({ crumb, actions }) {
+function Topbar({ crumb, actions, initials, onLogout }) {
+  const [showMenu, setShowMenu] = useState(false);
   return (
     <header id="topbar">
       <div className="brand">
@@ -83,7 +84,18 @@ function Topbar({ crumb, actions }) {
         <span className="kbd">⌘K</span>
       </div>
       {actions}
-      <div className="avatar" title="Evan Pruitt">EP</div>
+      <div className="avatar-wrap">
+        <div className="avatar" title={initials} onClick={() => setShowMenu(v => !v)}>
+          {initials}
+        </div>
+        {showMenu && (
+          <div className="avatar-menu">
+            <button className="avatar-menu-item" onClick={() => { setShowMenu(false); onLogout(); }}>
+              Sign out
+            </button>
+          </div>
+        )}
+      </div>
     </header>
   );
 }
