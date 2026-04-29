@@ -60,8 +60,8 @@ See: .planning/PROJECT.md
 ## Last Session
 
 - **Timestamp:** 2026-04-29
-- **Stopped At:** Phase 3 context gathered
-- **Resume File:** .planning/phases/03-live-data-layer/03-CONTEXT.md
+- **Stopped At:** Phase 3 UI-SPEC approved
+- **Resume File:** .planning/phases/03-live-data-layer/03-UI-SPEC.md
 
 ## Notes
 
