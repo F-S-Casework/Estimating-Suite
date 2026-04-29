@@ -19,9 +19,9 @@
 
 ### Authentication
 
-- [ ] **AUTH-01**: User can log in with email and password via Supabase Auth
+- [x] **AUTH-01**: User can log in with email and password via Supabase Auth *(02-02)*
 - [ ] **AUTH-02**: User session persists across browser refresh (localStorage token)
-- [ ] **AUTH-03**: User sees a login screen when not authenticated; app is not accessible without login
+- [x] **AUTH-03**: User sees a login screen when not authenticated; app is not accessible without login *(02-02 partial — LoginView component created; auth gate in shell.jsx pending 02-03)*
 - [ ] **AUTH-04**: User can log out from the topbar avatar
 
 ### Data Layer
