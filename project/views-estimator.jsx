@@ -1,6 +1,120 @@
 // Estimator workbook — V2: areas → sections → items hierarchy
 const { useState: uS_est, useMemo: uM_est, useEffect: uE_est, useRef: uR_est } = React;
 
+// ── Default exclusions / clarifications ───────────────────────────────────────
+const DEFAULT_EXCLUSIONS = [
+  'Demolition of existing casework or construction',
+  'Preparation and finishing of drywall, painting',
+  'Flooring (except as specified in casework design)',
+  'Plumbing and electrical (rough and trim)',
+  'Window treatments and hardware not integrated into casework',
+  'Appliances and equipment (unless specified as included)',
+  'Rubber base, cove base, or floor trim',
+  'Corner guards',
+  'Site finishing or patching of walls/ceilings',
+  'FRP panels and glazing/glass',
+].map(text => ({ text, active: true, sub: false }));
+
+const DEFAULT_CLARIFICATIONS = [
+  'Blum 125° concealed hinges, satin nickel',
+  'Brushed chrome pulls (standard hardware)',
+  'Accuride 3832 drawer slides',
+  '5mm shelf pin system',
+  'Dowel-and-screw joinery throughout',
+  'Net 30 payment terms',
+  'F&S standard construction methods',
+  'Lead time per project schedule',
+].map(text => ({ text, active: true, sub: false }));
+
+// ── ZZTakeoff parser ──────────────────────────────────────────────────────────
+function parseZZTakeoff(rows) {
+  let hdrIdx = -1, cols = {};
+  for (let i = 0; i < Math.min(10, rows.length); i++) {
+    const r = rows[i].map(c => String(c).toLowerCase());
+    if (r.some(c => c === 'name' || c === 'group')) { hdrIdx = i; break; }
+  }
+  if (hdrIdx < 0) return null;
+  const hdr = rows[hdrIdx].map(c => String(c).toLowerCase());
+  cols.name = hdr.findIndex(c => c === 'name' || c === 'group');
+  cols.qty  = hdr.findIndex(c => c === 'qty' || c === 'measurement 1');
+  cols.unit = hdr.findIndex(c => c === 'unit' || c === 'units 1');
+  cols.cost = hdr.findIndex(c => c === 'cost each' || c === 'unit cost');
+  const isFormatA = cols.cost >= 0;
+  const areas = [];
+  let cur = null;
+  for (let i = hdrIdx + 1; i < rows.length; i++) {
+    const r = rows[i];
+    const name = String(r[cols.name] || '').trim();
+    if (!name) continue;
+    const unitVal = cols.unit >= 0 ? String(r[cols.unit] || '').trim() : '';
+    const costVal = cols.cost >= 0 ? parseFloat(r[cols.cost]) : NaN;
+    const isArea = isFormatA ? isNaN(costVal) : !unitVal;
+    if (isArea) {
+      cur = { name, checked: true, items: [] };
+      areas.push(cur);
+    } else if (cur) {
+      cur.items.push({
+        desc: name, checked: true,
+        qty: parseFloat(r[cols.qty]) || 1,
+        unit: unitVal || 'EA',
+        unitCost: isNaN(costVal) ? 0 : costVal,
+      });
+    }
+  }
+  return areas.length ? areas : null;
+}
+
+// ── Reusable ItemListPanel ────────────────────────────────────────────────────
+function ItemListPanel({ title, items, onSave }) {
+  const [newText, setNewText] = uS_est('');
+  return (
+    <div style={{ padding: '24px 28px', maxWidth: 680 }}>
+      {title && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+          <div className="page-title">{title}</div>
+          <button className="btn sm ghost" style={{ marginLeft: 'auto' }}
+            onClick={() => onSave(items.map(i => ({ ...i, active: true })))}>All On</button>
+          <button className="btn sm ghost"
+            onClick={() => onSave(items.map(i => ({ ...i, active: false })))}>All Off</button>
+        </div>
+      )}
+      {!title && (
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginBottom: 10 }}>
+          <button className="btn sm ghost"
+            onClick={() => onSave(items.map(i => ({ ...i, active: true })))}>All On</button>
+          <button className="btn sm ghost"
+            onClick={() => onSave(items.map(i => ({ ...i, active: false })))}>All Off</button>
+        </div>
+      )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 12 }}>
+        {items.map((item, idx) => (
+          <div key={idx} style={{
+            display: 'flex', alignItems: 'flex-start', gap: 8, padding: '6px 10px',
+            background: 'var(--panel)', border: '1px solid var(--line)', borderRadius: 'var(--r-sm)',
+            marginLeft: item.sub ? 24 : 0, opacity: item.active ? 1 : 0.5
+          }}>
+            <input type="checkbox" checked={!!item.active} style={{ marginTop: 3, flexShrink: 0 }}
+              onChange={() => { const next = [...items]; next[idx] = { ...next[idx], active: !next[idx].active }; onSave(next); }} />
+            <textarea value={item.text} rows={1}
+              onChange={e => { const next = [...items]; next[idx] = { ...next[idx], text: e.target.value }; onSave(next); }}
+              style={{ flex: 1, border: 'none', background: 'transparent', fontSize: 12.5, resize: 'none',
+                fontFamily: 'var(--sans)', color: item.active ? 'var(--ink)' : 'var(--ink-3)' }} />
+            <button className="btn ghost xs" style={{ color: 'var(--bad)', flexShrink: 0 }}
+              onClick={() => onSave(items.filter((_, i) => i !== idx))}>×</button>
+          </div>
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: 6 }}>
+        <input value={newText} onChange={e => setNewText(e.target.value)}
+          placeholder="Add item…"
+          onKeyDown={e => { if (e.key === 'Enter' && newText.trim()) { onSave([...items, { text: newText.trim(), active: true, sub: false }]); setNewText(''); } }}
+          style={{ flex: 1, border: '1px solid var(--line)', borderRadius: 'var(--r-sm)', padding: '5px 8px', fontSize: 12.5, background: 'var(--bg)' }} />
+        <button className="btn sm" onClick={() => { if (newText.trim()) { onSave([...items, { text: newText.trim(), active: true, sub: false }]); setNewText(''); } }}>Add</button>
+      </div>
+    </div>
+  );
+}
+
 function fmt(n) { if (n == null || isNaN(n)) return '—'; return '$' + Number(n).toLocaleString(undefined, {maximumFractionDigits:0}); }
 
 function calcBid(tree, bid) {
@@ -35,6 +149,9 @@ function EstimatorView({ activeBidId }) {
   const [libCat,          setLibCat]          = uS_est('');
   const [centerView,      setCenterView]      = uS_est('grid');
   const [alts,            setAlts]            = uS_est(null);
+  const [termsTab,        setTermsTab]        = uS_est('general_terms');
+  const [zzPreview,       setZZPreview]       = uS_est(null);
+  const [zzImporting,     setZZImporting]     = uS_est(false);
   const saveTimer                             = uR_est(null);
 
   // Load bid metadata
@@ -247,6 +364,66 @@ function EstimatorView({ activeBidId }) {
     if (!confirm('Remove this alternate?')) return;
     const { error } = await window.dbHelpers.deleteAlternate(id);
     if (!error) setAlts(prev => prev.filter(a => a.id !== id));
+  }
+
+  // ── TERMS / EXCLUSIONS / CLARIFICATIONS HELPERS ──────────────────
+  function getItems(field) {
+    const raw = bid?.[field];
+    if (!raw || !raw.length) {
+      if (field === 'exclusions') return DEFAULT_EXCLUSIONS;
+      if (field === 'clarifications') return DEFAULT_CLARIFICATIONS;
+      return [];
+    }
+    return raw;
+  }
+
+  async function saveItems(field, items) {
+    setBid(prev => ({ ...prev, [field]: items }));
+    await window.dbHelpers.updateBidInfo(activeBidId, { [field]: items });
+  }
+
+  // ── ZZTAKEOFF IMPORT ─────────────────────────────────────────────
+  async function handleZZImport() {
+    if (!window.showOpenFilePicker) { alert('File import requires Chrome or Edge.'); return; }
+    try {
+      const [fh] = await window.showOpenFilePicker({
+        types: [{ description: 'Excel', accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx', '.xls'] } }],
+      });
+      const file = await fh.getFile();
+      const ab = await file.arrayBuffer();
+      const wb = window.XLSX.read(ab, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = window.XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      const parsed = parseZZTakeoff(rows);
+      if (!parsed) { alert('Could not parse ZZTakeoff format. Expected "Name" or "Group" header column.'); return; }
+      setZZPreview(parsed);
+    } catch (e) {
+      if (e.name !== 'AbortError') console.error('ZZTakeoff import error:', e);
+    }
+  }
+
+  async function doZZImport(areas) {
+    setZZImporting(true);
+    for (const area of areas.filter(a => a.checked && a.items.some(it => it.checked))) {
+      const { data: areaRow } = await window.dbHelpers.addArea(activeBidId, {
+        name: area.name, qty: 1, sort_order: (tree || []).length,
+      });
+      if (!areaRow) continue;
+      const { data: secRow } = await window.dbHelpers.addSection(areaRow.id, { name: 'Casework', sort_order: 0 });
+      if (!secRow) continue;
+      for (const [idx, it] of area.items.filter(i => i.checked).entries()) {
+        await window.dbHelpers.addLineItem({
+          bid_id: activeBidId, area_id: areaRow.id, section_id: secRow.id,
+          description: it.desc, qty: it.qty, unit: it.unit, unit_cost: it.unitCost, sort_order: idx,
+        });
+      }
+    }
+    setZZPreview(null);
+    setZZImporting(false);
+    // Reload tree
+    setTree(null);
+    setActiveAreaId(null);
+    setActiveSectionId(null);
   }
 
   // ── RENDER ──────────────────────────────────────────────────────
@@ -468,12 +645,35 @@ function EstimatorView({ activeBidId }) {
                 </table>
               )}
             </div>
-          ) : centerView !== 'grid' ? (
-            <div style={{padding:'40px 24px',textAlign:'center',color:'var(--ink-3)',fontSize:13}}>
-              <div style={{fontSize:15,fontWeight:600,color:'var(--ink-2)',marginBottom:8}}>
-                {centerView.charAt(0).toUpperCase()+centerView.slice(1)}
+          ) : centerView === 'exclusions' ? (
+            <ItemListPanel
+              title="Exclusions"
+              items={getItems('exclusions')}
+              onSave={items => saveItems('exclusions', items)} />
+          ) : centerView === 'clarifications' ? (
+            <ItemListPanel
+              title="Clarifications"
+              items={getItems('clarifications')}
+              onSave={items => saveItems('clarifications', items)} />
+          ) : centerView === 'terms' ? (
+            <div style={{ padding: '24px 28px', maxWidth: 680 }}>
+              <div className="page-title" style={{ marginBottom: 14 }}>Proposal Terms</div>
+              <div style={{ display: 'flex', gap: 4, marginBottom: 16, flexWrap: 'wrap' }}>
+                {[
+                  ['general_terms', 'General'],
+                  ['warranty', 'Warranty'],
+                  ['finish_terms', 'Finish'],
+                  ['hardware_terms', 'Hardware'],
+                  ['fab_note', 'Fab Note'],
+                ].map(([f, label]) => (
+                  <button key={f} className={`btn sm${termsTab === f ? ' accent' : ''}`}
+                    onClick={() => setTermsTab(f)}>{label}</button>
+                ))}
               </div>
-              Coming in the next plan (03-05c).
+              <ItemListPanel
+                title=""
+                items={getItems(termsTab)}
+                onSave={items => saveItems(termsTab, items)} />
             </div>
           ) : (
             (tree||[]).filter(a => !activeAreaId || a.id === activeAreaId).map(area => (
@@ -482,6 +682,7 @@ function EstimatorView({ activeBidId }) {
                   <span style={{fontSize:12,fontWeight:700,textTransform:'uppercase',letterSpacing:'.06em',color:'var(--ink-2)'}}>{area.name}</span>
                   {(area.qty||1)>1 && <span style={{fontSize:11,color:'var(--accent)',fontFamily:'var(--mono)'}}>×{area.qty}</span>}
                   <button className="btn sm" style={{marginLeft:'auto'}} onClick={()=>handleAddSection(area.id)}>+ Section</button>
+                  <button className="btn sm" onClick={handleZZImport} title="Import ZZTakeoff XLSX">↑ Import ZZTakeoff</button>
                 </div>
                 {(area.sections||[]).map(sec => (
                   <div key={sec.id}>
@@ -593,6 +794,44 @@ function EstimatorView({ activeBidId }) {
         </aside>
 
       </div>{/* /grid */}
+
+      {/* ZZTakeoff import preview modal */}
+      {zzPreview && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: 'var(--panel)', borderRadius: 'var(--r-lg)', padding: 24, width: 520, maxHeight: '80vh', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ fontWeight: 700, fontSize: 15 }}>ZZTakeoff Import Preview</div>
+            <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>Uncheck areas or items to exclude them from the import.</div>
+            <div style={{ overflowY: 'auto', flex: 1, border: '1px solid var(--line)', borderRadius: 'var(--r-sm)' }}>
+              {zzPreview.map((area, ai) => (
+                <div key={ai}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', background: 'var(--panel-alt)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+                    <input type="checkbox" checked={area.checked}
+                      onChange={() => setZZPreview(prev => prev.map((a, i) => i === ai ? { ...a, checked: !a.checked } : a))} />
+                    {area.name}
+                    <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--ink-3)', fontWeight: 400 }}>{area.items.length} items</span>
+                  </label>
+                  {area.items.map((it, ii) => (
+                    <label key={ii} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 10px 4px 26px', fontSize: 12, cursor: 'pointer' }}>
+                      <input type="checkbox" checked={it.checked}
+                        onChange={() => setZZPreview(prev => prev.map((a, i) => i === ai
+                          ? { ...a, items: a.items.map((t, j) => j === ii ? { ...t, checked: !t.checked } : t) } : a))} />
+                      <span style={{ flex: 1 }}>{it.desc}</span>
+                      <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)' }}>{it.qty} {it.unit} @ ${it.unitCost}</span>
+                    </label>
+                  ))}
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button className="btn" onClick={() => setZZPreview(null)} disabled={zzImporting}>Cancel</button>
+              <button className="btn accent" onClick={() => doZZImport(zzPreview)} disabled={zzImporting}>
+                {zzImporting ? 'Importing…' : 'Import'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
