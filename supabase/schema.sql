@@ -157,3 +157,24 @@ CREATE TABLE activity_log (
 ALTER TABLE activity_log ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "authenticated_full_access" ON activity_log
   FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- PHASE 3 MIGRATIONS
+-- Run in Supabase Dashboard > SQL Editor after initial schema is applied
+-- All statements use IF NOT EXISTS so they are safe to re-run
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- bids: add GC name and project type
+ALTER TABLE bids ADD COLUMN IF NOT EXISTS gc_name text;
+ALTER TABLE bids ADD COLUMN IF NOT EXISTS project_type text;
+
+-- library_items: add code and split material/labor costs
+ALTER TABLE library_items ADD COLUMN IF NOT EXISTS code text;
+ALTER TABLE library_items ADD COLUMN IF NOT EXISTS material_cost numeric(12,2);
+ALTER TABLE library_items ADD COLUMN IF NOT EXISTS labor_cost numeric(12,2);
+
+-- jobs: add scheduling and financial columns
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS install_start date;
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS install_end date;
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS gc_name text;
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS contract_value numeric(12,2);
