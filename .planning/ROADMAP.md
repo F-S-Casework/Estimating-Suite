@@ -61,17 +61,20 @@
 **Dependencies:** Phase 2
 **UI hint:** yes
 **Complexity:** high
-**Plans:** 8 plans
+**Plans:** 10 plans
+**Status:** Complete — 2026-04-30
 
 Plans:
-- [ ] 03-01-PLAN.md — Schema migrations + Spinner/EmptyState components + Fuse.js CDN in index.html
-- [ ] 03-02-PLAN.md — supabase.js query helpers (getBids, addBid, updateBidStage, getLineItems, addLineItem, updateLineItem, deleteLineItem, getLibraryItems, upsertLibraryItem, getJobs, getContacts, addContact, updateContact)
-- [ ] 03-03-PLAN.md — shell.jsx activeBidId threading + openBid prop passing + dynamic estimator crumb
-- [ ] 03-04-PLAN.md — views-home.jsx PipelineView live data + create bid inline form + stage advance buttons
-- [ ] 03-05-PLAN.md — views-estimator.jsx live line items + inline CRUD + library insert + bid header
-- [ ] 03-06-PLAN.md — views-jobs.jsx JobsView live data
-- [ ] 03-07-PLAN.md — views-secondary.jsx LibraryView live data + Fuse.js search + add/edit item form
-- [ ] 03-08-PLAN.md — views-secondary.jsx ContactsView live data + add/edit contact form
+- [x] 03-01-PLAN.md — Schema migrations + Spinner/EmptyState components + XLSX/Fuse.js CDN tags
+- [x] 03-02-PLAN.md — supabase.js query helpers (all views + areas/sections for V2 estimator)
+- [x] 03-03-PLAN.md — shell.jsx activeBidId threading + openBid prop passing + dynamic estimator crumb
+- [x] 03-04-PLAN.md — views-home.jsx PipelineView live data + create bid inline form + stage advance buttons
+- [x] 03-05-PLAN.md — views-estimator.jsx V2 rewrite: areas/sections/items hierarchy + cost bar + library insert
+- [x] 03-05b-PLAN.md — views-estimator.jsx Info panel (20+ fields) + Alternates CRUD
+- [x] 03-05c-PLAN.md — views-estimator.jsx Exclusions/Clarifications/Terms JSONB editors + ZZTakeoff import
+- [x] 03-06-PLAN.md — views-jobs.jsx JobsView live data
+- [x] 03-07-PLAN.md — views-secondary.jsx LibraryView live data + Fuse.js search + add/edit item form
+- [x] 03-08-PLAN.md — views-secondary.jsx ContactsView live data + add/edit contact form
 
 ### Success Criteria
 1. Creating a new bid from the Pipeline view persists the record and it appears immediately in the kanban board after reload.
