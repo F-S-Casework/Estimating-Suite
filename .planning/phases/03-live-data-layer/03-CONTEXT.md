@@ -36,6 +36,16 @@ Replace every hardcoded sample data array across all views with live Supabase qu
 - **D-14:** Empty state: centered message + call-to-action button, with view-specific copy (e.g., "No bids yet — create your first bid." with the create form trigger). Implemented as a reusable `EmptyState` component accepting `message` and optional `action` props.
 - **D-15:** Both `Spinner` and `EmptyState` are defined once (in `shell.jsx` or at the top of a shared section) and used across all views. Exposed via `window.Spinner` and `window.EmptyState` to match the existing `window.Views` / `window.Icon` pattern.
 
+### V2 Estimator Architecture (added 2026-04-30)
+- **D-17:** EstimatorView uses a 3-level hierarchy: areas → sections → items. Flat `line_items` is replaced by `areas` table + `sections` table + `line_items` (with `area_id` and `section_id` FK columns). This matches FS_Estimator_v2_1.html exactly.
+- **D-18:** Cost formula uses V2 chain — NOT the original OH/profit/bond formula. Chain: `mat = Σ(area.qty × item totals, skipping ignored)`; `oh = mat × oh_pct%`; `matOh = mat + oh`; `del = matOh × del_pct%`; `ins = matOh × ins_pct%`; `total = matOh + del + ins`. Delivery and Install apply to `(material + overhead)`, not to material alone.
+- **D-19:** Area `qty` is an integer multiplier (default 1). It represents identical repeated rooms/floors (e.g., `qty=4` on "Exam Room" applies all that area's item costs × 4 in `calcBid`). Shown as "×4" badge in sidebar.
+- **D-20:** Hierarchy stored in proper relational tables (`areas`, `sections`) — not embedded JSONB arrays. Chosen for: clean FK cascades on delete, sortable rows, future drag-to-reorder. Tree assembled client-side after 3 parallel queries: `getAreas(bidId)` + `getAllSections(areaIds)` + `getLineItems(bidId)`.
+- **D-21:** Exclusions, clarifications, and 5 terms sections (general_terms, warranty, finish_terms, hardware_terms, fab_note) stored as JSONB arrays on the `bids` table. Each item: `{ text, active, sub }`. Chosen for simplicity — no separate tables, fast per-bid access, no join needed.
+- **D-22:** ZZTakeoff XLSX import uses `window.showOpenFilePicker` (File System Access API) + XLSX.js CDN (`cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js`). Parses Format A (priced, has "Cost Each" column) and Format B (measured, has "Measurement 1" column). Creates areas + a default "Casework" section + line items via existing `dbHelpers`.
+- **D-23:** Estimator sidebar uses the app's warm paper palette (`var(--panel-alt)` #F3EEE4 background, `var(--accent)` inset for active state) — NOT the dark navy (#1a2235) from the standalone V2 tool. All views must share one consistent palette.
+- **D-24:** `centerView` state in EstimatorView controls which panel the center area shows: `'grid'` (area/section/item table), `'info'` (project info form), `'alternates'`, `'exclusions'`, `'clarifications'`, `'terms'`. Sidebar links set this. Default is `'grid'`.
+
 ### File Structure Correction
 - **D-16 (IMPORTANT — ROADMAP has wrong filename):** `ROADMAP.md` refers to `project/views-primary.jsx` which does not exist. The actual file layout is:
   - `project/views-home.jsx` — HomeView + **PipelineView** (not views-primary.jsx)
@@ -53,7 +63,7 @@ Replace every hardcoded sample data array across all views with live Supabase qu
 **Downstream agents MUST read these before planning or implementing.**
 
 ### Requirements
-- `.planning/REQUIREMENTS.md` — Full v1 requirement list; Phase 3 requirements: DATA-03–05, PIPE-01–04, EST-01–05, LIB-01–05, CONT-01–03
+- `.planning/REQUIREMENTS.md` — Full v1 requirement list; Phase 3 requirements: DATA-03–05, PIPE-01–04, EST-01–11, LIB-01–05, CONT-01–03
 - `.planning/ROADMAP.md` — Phase 3 goal and success criteria (Key Files section has wrong filename — see D-16 above)
 
 ### Project Context
@@ -67,7 +77,8 @@ Replace every hardcoded sample data array across all views with live Supabase qu
 - `project/views-jobs.jsx` — `JobsView` + `JobView` + `COView` with hardcoded job rows.
 - `project/views-secondary.jsx` — `LibraryView`, `ContactsView`, `CalendarView` with hardcoded arrays. All need Supabase queries.
 - `project/supabase.js` — Supabase client (`window.sb`). Phase 3 adds reusable query helpers here.
-- `supabase/schema.sql` — Database schema; confirms column names for `bids`, `line_items`, `library_items`, `contacts`, `jobs` tables.
+- `supabase/schema.sql` — Database schema; confirms column names for `bids`, `line_items`, `library_items`, `contacts`, `jobs`, `areas`, `sections`, `bid_alternates` tables.
+- `project/uploads/FS_Estimator_v2_1.html` — Source V2 estimator (reference for UI layout, cost formula, ZZTakeoff parser, default exclusions/clarifications/terms boilerplate)
 
 ### Prior Phase Decisions
 - `.planning/phases/02-supabase-foundation/02-03-SUMMARY.md` — Auth gate pattern, session handling, `window.sb` usage
@@ -113,6 +124,11 @@ Replace every hardcoded sample data array across all views with live Supabase qu
 - Pre-populate estimate with library defaults when opening a new bid — deferred to v2
 - `library_item_id` reference on line items (for stale-rate warnings) — deferred to ADV-02 (v2)
 - CSV import UI in the app for the pricing library — deferred; user handles via Supabase dashboard
+- Drag-to-reorder items within sections — deferred to v2 (Phase 3 is CRUD only)
+- Undo/redo stack — deferred to v2
+- Supplier/sub items (separate cost rows with markup %) — deferred; not in current schema
+- AI-powered document ingestion (finish schedule, spec findings) — deferred to later phase
+- PDF proposal generation — Phase 4 (depends on Phase 3 complete)
 
 </deferred>
 
@@ -120,3 +136,4 @@ Replace every hardcoded sample data array across all views with live Supabase qu
 
 *Phase: 3-Live Data Layer*
 *Context gathered: 2026-04-29*
+*Last updated: 2026-04-30 — added D-17–D-24 (V2 estimator architecture)*
