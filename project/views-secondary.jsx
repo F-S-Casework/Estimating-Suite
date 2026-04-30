@@ -308,64 +308,163 @@ function LibraryView() {
 /* ─────────────────────────────────────────────────────────────
    ContactsView
 ───────────────────────────────────────────────────────────── */
-const ALL_CONTACTS = [
-  { name:'Mike Donovan',  co:'Turner Construction',    role:'gc',    phone:'(208) 555-0142', email:'m.donovan@turner.com',          last:'Ada County Courthouse' },
-  { name:'Sara Wills',    co:'Hensel Phelps',          role:'gc',    phone:'(208) 555-0187', email:'swills@henselphelps.com',        last:'St. Luke\'s MOB' },
-  { name:'Jim Chávez',    co:'Petra Inc.',             role:'gc',    phone:'(208) 555-0233', email:'jchavez@petra-inc.com',          last:'Boise High Renovation' },
-  { name:'Renee Park',    co:'City of Boise',          role:'owner', phone:'(208) 555-0098', email:'rpark@cityofboise.org',          last:'Meridian Library' },
-  { name:'Tom Aldridge',  co:'ParkCenter LLC',         role:'owner', phone:'(208) 555-0310', email:'taldridge@parkcenter.com',       last:'ParkCenter Office' },
-  { name:'Dani Osei',     co:'Fisher Development',     role:'owner', phone:'(208) 555-0422', email:'dosei@fisherdevelopment.com',    last:'Meridian Library' },
-  { name:'Kyle Martz',    co:'NW Glass & Glaze',       role:'sub',   phone:'(208) 555-0511', email:'kyle@nwglassglaze.com',          last:'St. Luke\'s MOB' },
-  { name:'Amber Tran',    co:'Pacific Countertops',    role:'sub',   phone:'(503) 555-0178', email:'atran@pacificcountertops.com',   last:'Ada County Courthouse' },
-  { name:'Brett Schulz',  co:'Commercial Electric',    role:'sub',   phone:'(208) 555-0639', email:'bschulz@commelec.com',           last:'Boise High Renovation' },
-  { name:'Rosa Ibarra',   co:'F&S Field',              role:'field', phone:'(208) 555-0701', email:'ribarra@fs-millwork.com',        last:'Ada County Courthouse' },
-  { name:'Derek Holt',    co:'F&S Field',              role:'field', phone:'(208) 555-0744', email:'dholt@fs-millwork.com',          last:'ParkCenter Office' },
-  { name:'Nate Fowler',   co:'F&S Field',              role:'field', phone:'(208) 555-0792', email:'nfowler@fs-millwork.com',        last:'Meridian Library' },
-];
 const ROLE_LABEL = { gc:'GC', owner:'Owner', sub:'Sub', field:'Field' };
 const ROLE_CHIP  = { gc:'accent', owner:'ok', sub:'warn', field:'' };
+const TAB_ROLE   = { All:null, GCs:'gc', Owners:'owner', Subs:'sub', Field:'field' };
 const fmtSz = b => b>=1048576 ? (b/1048576).toFixed(1)+'MB' : Math.round(b/1024)+'KB';
 
 function ContactsView() {
-  const [tab, setTab] = useState('All');
-  const rows = tab==='All' ? ALL_CONTACTS : ALL_CONTACTS.filter(c => ROLE_LABEL[c.role] === tab || (tab==='GCs'&&c.role==='gc') || (tab==='Owners'&&c.role==='owner') || (tab==='Subs'&&c.role==='sub') || (tab==='Field'&&c.role==='field'));
+  const [contacts, setContacts] = useState(null);
+  const [tab, setTab]           = useState('All');
+  const [showForm, setShowForm] = useState(false);
+  const [editContact, setEditContact] = useState(null);
+  const [form, setForm]         = useState({ name:'', company:'', role:'gc', phone:'', email:'' });
+  const [saving, setSaving]     = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      const { data } = await window.dbHelpers.getContacts();
+      if (!cancelled) setContacts(data || []);
+    }
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
+  const displayed = useMemo(() => {
+    if (!contacts) return [];
+    const role = TAB_ROLE[tab];
+    return role ? contacts.filter(c => c.role === role) : contacts;
+  }, [contacts, tab]);
+
+  function openAdd() {
+    setEditContact(null);
+    setForm({ name:'', company:'', role:'gc', phone:'', email:'' });
+    setShowForm(true);
+  }
+
+  function openEdit(contact) {
+    setEditContact(contact);
+    setForm({
+      name: contact.name || '',
+      company: contact.company || '',
+      role: contact.role || 'gc',
+      phone: contact.phone || '',
+      email: contact.email || '',
+    });
+    setShowForm(true);
+  }
+
+  async function handleSave(e) {
+    e.preventDefault();
+    if (!form.name) return;
+    setSaving(true);
+    if (editContact) {
+      const { error } = await window.dbHelpers.updateContact(editContact.id, form);
+      setSaving(false);
+      if (error) { alert('Error: ' + error.message); return; }
+      setContacts(prev => prev.map(c => c.id === editContact.id ? { ...c, ...form } : c));
+    } else {
+      const { data: newContact, error } = await window.dbHelpers.addContact(form);
+      setSaving(false);
+      if (error) { alert('Error: ' + error.message); return; }
+      if (newContact) setContacts(prev => [newContact, ...prev]);
+    }
+    setShowForm(false);
+    setEditContact(null);
+  }
+
+  if (contacts === null) return <window.Spinner />;
 
   return (
     <div className="view active">
       <div className="page-head">
         <div>
           <h1 className="page-title">Contacts</h1>
-          <div className="page-sub">{ALL_CONTACTS.length} contacts · GCs, owners, subs &amp; field</div>
+          <div className="page-sub">{contacts.length} contacts</div>
         </div>
         <div className="spacer"/>
         <div className="actions">
-          <button className="btn accent sm"><Icon.plus/> Add Contact</button>
+          <button className="btn accent sm" onClick={openAdd}><Icon.plus/> Add Contact</button>
         </div>
       </div>
       <div style={{padding:'12px 20px 0'}}>
         <div style={{display:'flex', gap:6, marginBottom:12}}>
-          {['All','GCs','Owners','Subs','Field'].map(t => (
+          {Object.keys(TAB_ROLE).map(t => (
             <button key={t} onClick={()=>setTab(t)} className={`chip ${tab===t?'solid':''}`} style={{cursor:'pointer'}}>{t}</button>
           ))}
         </div>
-        <table className="wf">
-          <thead><tr>
-            <th>Name</th><th>Company</th><th style={{width:65}}>Role</th>
-            <th style={{width:130}}>Phone</th><th>Email</th><th>Last Project</th>
-          </tr></thead>
-          <tbody>
-            {rows.map(c => (
-              <tr key={c.email}>
-                <td style={{fontWeight:600}}>{c.name}</td>
-                <td style={{color:'var(--ink-2)'}}>{c.co}</td>
-                <td><span className={`chip ${ROLE_CHIP[c.role]}`}>{ROLE_LABEL[c.role]}</span></td>
-                <td className="tnum" style={{fontSize:12}}>{c.phone}</td>
-                <td style={{fontSize:12}}><a href={`mailto:${c.email}`} style={{color:'var(--accent)'}}>{c.email}</a></td>
-                <td style={{fontSize:12, color:'var(--ink-3)'}}>{c.last}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+
+        {showForm && (
+          <form className="card" style={{padding:'14px 16px', marginBottom:12, borderColor:'var(--accent)', borderWidth:1.5}} onSubmit={handleSave}>
+            <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 100px 120px 1fr auto', gap:8, alignItems:'flex-end'}}>
+              <div>
+                <div style={{fontSize:10.5,fontWeight:700,color:'var(--mute)',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:3}}>Name *</div>
+                <input required value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="Mike Donovan"
+                  style={{width:'100%',border:'1px solid var(--line)',borderRadius:'var(--r-sm)',padding:'5px 8px',fontSize:12,background:'var(--paper)'}}/>
+              </div>
+              <div>
+                <div style={{fontSize:10.5,fontWeight:700,color:'var(--mute)',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:3}}>Company</div>
+                <input value={form.company} onChange={e=>setForm(f=>({...f,company:e.target.value}))} placeholder="Turner Construction"
+                  style={{width:'100%',border:'1px solid var(--line)',borderRadius:'var(--r-sm)',padding:'5px 8px',fontSize:12,background:'var(--paper)'}}/>
+              </div>
+              <div>
+                <div style={{fontSize:10.5,fontWeight:700,color:'var(--mute)',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:3}}>Role</div>
+                <select value={form.role} onChange={e=>setForm(f=>({...f,role:e.target.value}))}
+                  style={{width:'100%',border:'1px solid var(--line)',borderRadius:'var(--r-sm)',padding:'5px 8px',fontSize:12,background:'var(--paper)'}}>
+                  <option value="gc">GC</option>
+                  <option value="owner">Owner</option>
+                  <option value="sub">Sub</option>
+                  <option value="field">Field</option>
+                </select>
+              </div>
+              <div>
+                <div style={{fontSize:10.5,fontWeight:700,color:'var(--mute)',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:3}}>Phone</div>
+                <input value={form.phone} onChange={e=>setForm(f=>({...f,phone:e.target.value}))} placeholder="(208) 555-0142"
+                  style={{width:'100%',border:'1px solid var(--line)',borderRadius:'var(--r-sm)',padding:'5px 8px',fontSize:12,background:'var(--paper)'}}/>
+              </div>
+              <div>
+                <div style={{fontSize:10.5,fontWeight:700,color:'var(--mute)',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:3}}>Email</div>
+                <input type="email" value={form.email} onChange={e=>setForm(f=>({...f,email:e.target.value}))} placeholder="m.donovan@turner.com"
+                  style={{width:'100%',border:'1px solid var(--line)',borderRadius:'var(--r-sm)',padding:'5px 8px',fontSize:12,background:'var(--paper)'}}/>
+              </div>
+              <div style={{display:'flex',gap:4,paddingBottom:1}}>
+                <button className="btn accent sm" type="submit" disabled={saving}>{saving?'Saving…':'Save'}</button>
+                <button className="btn ghost sm" type="button" onClick={()=>setShowForm(false)}>Cancel</button>
+              </div>
+            </div>
+          </form>
+        )}
+
+        {contacts.length === 0 ? (
+          <window.EmptyState
+            heading="No contacts yet"
+            body="Add GCs, owners, subs, and field contacts here."
+            action={{ label:'Add Contact', onClick:openAdd }}
+          />
+        ) : displayed.length === 0 ? (
+          <div className="muted" style={{padding:'24px 0', textAlign:'center', fontSize:12}}>No contacts in this category.</div>
+        ) : (
+          <table className="wf">
+            <thead><tr>
+              <th>Name</th><th>Company</th><th style={{width:65}}>Role</th>
+              <th style={{width:130}}>Phone</th><th>Email</th>
+            </tr></thead>
+            <tbody>
+              {displayed.map(c => (
+                <tr key={c.id} style={{cursor:'pointer'}} onClick={() => openEdit(c)}>
+                  <td style={{fontWeight:600}}>{c.name}</td>
+                  <td style={{color:'var(--ink-2)'}}>{c.company || '—'}</td>
+                  <td><span className={`chip ${ROLE_CHIP[c.role]||''}`}>{ROLE_LABEL[c.role] || c.role}</span></td>
+                  <td className="tnum" style={{fontSize:12}}>{c.phone || '—'}</td>
+                  <td style={{fontSize:12}}>
+                    {c.email ? <a href={`mailto:${c.email}`} style={{color:'var(--accent)'}} onClick={e=>e.stopPropagation()}>{c.email}</a> : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
