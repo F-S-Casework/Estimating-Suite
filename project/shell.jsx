@@ -38,6 +38,28 @@ const NAV = [
   { id:'bidhistory',label:'Bid History',   group:'Insight' },
 ];
 
+function Spinner() {
+  return (
+    <div style={{display:'flex', justifyContent:'center', alignItems:'center', padding:'48px 0'}}>
+      <div className="spinner" aria-label="Loading…"/>
+    </div>
+  );
+}
+
+function EmptyState({ heading, body, action }) {
+  return (
+    <div style={{display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'48px 0', maxWidth:360, margin:'0 auto', textAlign:'center'}}>
+      <div style={{fontSize:14, fontWeight:600, color:'var(--ink-2)'}}>{heading}</div>
+      {body && <div style={{fontSize:13, color:'var(--ink-3)', marginTop:6}}>{body}</div>}
+      {action && (
+        <button className="btn accent sm" style={{marginTop:16}} onClick={action.onClick}>
+          {action.label}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function Rail({ active, onGo }) {
   const groups = {};
   NAV.forEach(n => { (groups[n.group] ||= []).push(n); });
@@ -195,5 +217,7 @@ function App() {
   return <AuthenticatedApp session={session} />;
 }
 
+window.Spinner = Spinner;
+window.EmptyState = EmptyState;
 window.App = App;
 window.Icon = Icon;
