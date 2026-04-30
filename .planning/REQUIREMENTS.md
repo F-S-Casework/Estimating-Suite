@@ -44,9 +44,15 @@
 
 - [ ] **EST-01**: User can create a new estimate for a bid
 - [ ] **EST-02**: User can add/edit/delete line items in the estimating workbook
-- [ ] **EST-03**: Subtotals and grand total (with OH%, profit%, bond%) update automatically
+- [ ] **EST-03**: Subtotals and base bid total update automatically using V2 formula: Material → OH% → matOh → Delivery% + Install% → Base Bid
 - [ ] **EST-04**: User can search the pricing library and insert an item into the estimate
 - [ ] **EST-05**: Line items save to Supabase (persist across sessions)
+- [ ] **EST-06**: User can organize line items into areas and sections (3-level hierarchy: area → section → item); area qty multiplier applies costs across identical rooms/floors
+- [ ] **EST-07**: User can fill in project metadata on the bid (GC, architect, bid docs, drawings dated, specs dated, addendums, estimator, terms, delivery date, doc type, pricing mode)
+- [ ] **EST-08**: User can add/edit/delete alternate pricing items; alternates display separately from base bid total
+- [ ] **EST-09**: User can import areas and items from a ZZTakeoff .xlsx export; preview modal allows per-item exclusion before committing
+- [ ] **EST-10**: User can manage exclusions and clarifications with pre-populated F&S defaults; each item toggleable active/inactive
+- [ ] **EST-11**: User can manage proposal terms (General Terms, Warranty, Finish Materials, Hardware, Fab Note) with pre-populated boilerplate
 
 ### Pricing Library
 
@@ -152,6 +158,12 @@
 | EST-03 | Phase 3 | Pending |
 | EST-04 | Phase 3 | Pending |
 | EST-05 | Phase 3 | Pending |
+| EST-06 | Phase 3 | Pending |
+| EST-07 | Phase 3 | Pending |
+| EST-08 | Phase 3 | Pending |
+| EST-09 | Phase 3 | Pending |
+| EST-10 | Phase 3 | Pending |
+| EST-11 | Phase 3 | Pending |
 | LIB-01 | Phase 3 | Pending |
 | LIB-02 | Phase 3 | Pending |
 | LIB-03 | Phase 3 | Pending |
@@ -181,10 +193,10 @@
 | RPT-05 | Phase 7 | Pending |
 
 **Coverage:**
-- v1 requirements: 49 total
-- Mapped to phases: 49
+- v1 requirements: 55 total (49 original + EST-06–11)
+- Mapped to phases: 55
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-27*
-*Last updated: 2026-04-27 after initial definition*
+*Last updated: 2026-04-30 — added EST-06–11 (V2 estimator hierarchy, info form, alternates, ZZTakeoff, exclusions/clarifications, terms); fixed EST-03 formula to V2 (OH/Del/Ins)*
