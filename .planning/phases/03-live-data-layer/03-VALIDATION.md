@@ -1,7 +1,8 @@
 # Phase 3: Live Data Layer — Validation Criteria
 
 **Phase:** 3 — Live Data Layer
-**Status:** Ready for execution
+**Status:** Audited — 2026-04-30
+**Nyquist:** PARTIAL — 6 automated static checks + 20 manual-only (CDN-only stack, no test runner)
 
 No automated test runner available (CDN-only, no npm). All validation is manual acceptance-criteria based.
 
@@ -72,3 +73,37 @@ After Phase 3 execution, verify these Phase 1–2 features are unbroken:
 
 *Phase: 3-Live Data Layer*
 *Created: 2026-04-30*
+
+---
+
+## Automated Static Checks (run 2026-04-30)
+
+These grep-based checks can be re-run at any time without a browser:
+
+| Check | Command | Result |
+|-------|---------|--------|
+| DATA-03: No hardcoded data arrays in live views | `grep -n "const.*=.*\[{" project/views-*.jsx` | ✓ PASS — 0 matches |
+| DATA-03: Views use dbHelpers not raw window.sb | `grep -n "window\.sb\.from" project/views-home.jsx project/views-estimator.jsx project/views-secondary.jsx` | ✓ PASS — 0 matches |
+| EST-05: activeBidId persisted to localStorage | `grep -c "fs-active-bid\|localStorage" project/shell.jsx` | ✓ PASS — 4 matches |
+| DATA-04: Null=loading pattern used | `grep -c "=== null" project/views-*.jsx` (data-bearing views) | ✓ PASS — 6 matches |
+| EST-03: V2 cost formula chain in EstimatorView | `grep -n "matOh\|oh_pct\|del_pct\|ins_pct" project/views-estimator.jsx` | ✓ PASS — formula confirmed |
+| EST-02: line_items.total never sent in writes | `grep -n "total" project/supabase.js` | ✓ PASS — guard comment present |
+| CDN order: XLSX before Fuse.js in index.html | `grep -n "xlsx\|fuse" index.html` | ✓ PASS — lines 22/23 correct |
+| LIB-02: window.Fuse graceful fallback | `grep -n "typeof window\.Fuse" project/views-secondary.jsx` | ✓ PASS — fallback present |
+
+## Deviations Noted
+
+| File | Line | Issue | Severity |
+|------|------|-------|----------|
+| project/views-jobs.jsx | 109 | JobView uses `window.sb.from('change_orders')` directly instead of `window.dbHelpers` | Low — Phase 5 will refactor this; change_orders is out-of-scope for Phase 3 live data |
+
+## Validation Audit 2026-04-30
+
+| Metric | Count |
+|--------|-------|
+| Requirements audited | 20 |
+| Automated static checks | 6 |
+| Manual-only | 20 |
+| Gaps requiring test generation | 0 (no test runner available) |
+| Deviations noted | 1 (low severity) |
+| Escalated to manual | 0 |

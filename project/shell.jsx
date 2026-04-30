@@ -38,6 +38,28 @@ const NAV = [
   { id:'bidhistory',label:'Bid History',   group:'Insight' },
 ];
 
+function Spinner() {
+  return (
+    <div style={{display:'flex', justifyContent:'center', alignItems:'center', padding:'48px 0'}}>
+      <div className="spinner" aria-label="Loading…"/>
+    </div>
+  );
+}
+
+function EmptyState({ heading, body, action }) {
+  return (
+    <div style={{display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'48px 0', maxWidth:360, margin:'0 auto', textAlign:'center'}}>
+      <div style={{fontSize:14, fontWeight:600, color:'var(--ink-2)'}}>{heading}</div>
+      {body && <div style={{fontSize:13, color:'var(--ink-3)', marginTop:6}}>{body}</div>}
+      {action && (
+        <button className="btn accent sm" style={{marginTop:16}} onClick={action.onClick}>
+          {action.label}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function Rail({ active, onGo }) {
   const groups = {};
   NAV.forEach(n => { (groups[n.group] ||= []).push(n); });
@@ -107,6 +129,18 @@ function AuthenticatedApp({ session }) {
   const go = (id) => { setActive(id); try { localStorage.setItem('fs-view', id); } catch {} };
   useEffect(() => { window.__go = go; }, []);
 
+  const [activeBidId, setActiveBidId] = useState(() => {
+    try { return localStorage.getItem('fs-active-bid') || null; } catch { return null; }
+  });
+  const [activeBidName, setActiveBidName] = useState('');
+
+  const openBid = (bidId, bidName) => {
+    setActiveBidId(bidId);
+    setActiveBidName(bidName || '');
+    try { localStorage.setItem('fs-active-bid', bidId); } catch {}
+    go('estimator');
+  };
+
   // Derive initials from email (e.g. "evan.pruitt@fs.com" → "EP")
   const initials = useMemo(() => {
     const email = session?.user?.email || '';
@@ -118,14 +152,14 @@ function AuthenticatedApp({ session }) {
     switch (active) {
       case 'home': return <><b>Home</b> <span className="sep">/</span> <span>Pipeline overview</span></>;
       case 'pipeline': return <><b>Pipeline</b> <span className="sep">/</span> <span>All stages</span></>;
-      case 'estimator': return <><span>Bids</span> <span className="sep">/</span> <b>Denver Regional Lab</b> <span className="sep">/</span> <span>v3 draft</span></>;
+      case 'estimator': return <><span>Bids</span> <span className="sep">/</span> <b>{activeBidName || 'Bid Workbook'}</b></>;
       case 'jobs': return <><b>Jobs</b> <span className="sep">/</span> <span>Active · 2026</span></>;
       case 'job': return <><span>Jobs</span> <span className="sep">/</span> <b>Ada Co. Courthouse · 26-040</b></>;
       case 'co': return <><span>Jobs</span> <span className="sep">/</span> <span>Ada Co. Courthouse</span> <span className="sep">/</span> <b>Change Orders</b></>;
       case 'bidhistory': return <><span>Insight</span> <span className="sep">/</span> <b>Bid History &amp; Comparison</b></>;
       default: return <b>{NAV.find(n=>n.id===active)?.label || 'Home'}</b>;
     }
-  }, [active]);
+  }, [active, activeBidName]);
 
   const actions = useMemo(() => {
     switch (active) {
@@ -161,8 +195,6 @@ function AuthenticatedApp({ session }) {
     }
   }, [active]);
 
-  const View = window.Views?.[active] || window.Views?.home;
-
   async function handleLogout() {
     await window.sb.auth.signOut();
   }
@@ -173,7 +205,23 @@ function AuthenticatedApp({ session }) {
       <div id="main">
         <Rail active={active} onGo={go} />
         <main id="content">
-          {View ? <View go={go} /> : <div style={{padding:40}}>Loading…</div>}
+          {(() => {
+            if (!window.Views) return <div style={{padding:40}}>Loading…</div>;
+            switch (active) {
+              case 'pipeline': {
+                const PV = window.Views.pipeline;
+                return PV ? <PV go={go} onOpenBid={openBid} /> : null;
+              }
+              case 'estimator': {
+                const EV = window.Views.estimator;
+                return EV ? <EV go={go} activeBidId={activeBidId} /> : null;
+              }
+              default: {
+                const V = window.Views[active] || window.Views.home;
+                return V ? <V go={go} /> : <div style={{padding:40}}>Loading…</div>;
+              }
+            }
+          })()}
         </main>
       </div>
     </div>
@@ -195,5 +243,7 @@ function App() {
   return <AuthenticatedApp session={session} />;
 }
 
+window.Spinner = Spinner;
+window.EmptyState = EmptyState;
 window.App = App;
 window.Icon = Icon;
