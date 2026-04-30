@@ -34,6 +34,8 @@ function EstimatorView({ activeBidId }) {
   const [libQ,            setLibQ]            = uS_est('');
   const [libCat,          setLibCat]          = uS_est('');
   const [centerView,      setCenterView]      = uS_est('grid');
+  const [alts,            setAlts]            = uS_est(null);
+  const saveTimer                             = uR_est(null);
 
   // Load bid metadata
   uE_est(() => {
@@ -75,6 +77,12 @@ function EstimatorView({ activeBidId }) {
     }
     load();
     return () => { cancelled = true; };
+  }, [activeBidId]);
+
+  // Load alternates when bid changes
+  uE_est(() => {
+    if (!activeBidId) { setAlts([]); return; }
+    window.dbHelpers.getAlternates(activeBidId).then(({ data }) => setAlts(data || []));
   }, [activeBidId]);
 
   // Load library items once
@@ -213,6 +221,34 @@ function EstimatorView({ activeBidId }) {
           ? { ...s, items: [...s.items, data] } : s) } : a));
   }
 
+  // ── MARKUP % HANDLER (optimistic + debounced persist) ────────────
+  function handlePctChange(field, value) {
+    const n = Math.max(0, Math.min(100, parseFloat(value) || 0));
+    setBid(prev => ({ ...prev, [field]: n }));
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      window.dbHelpers.updateBidInfo(activeBidId, { [field]: n });
+    }, 800);
+  }
+
+  // ── ALTERNATES HANDLERS ───────────────────────────────────────────
+  async function handleAddAlt() {
+    const { data, error } = await window.dbHelpers.addAlternate(activeBidId, {
+      description: 'New alternate', qty: 1, unit: 'LS', price: 0, sort_order: (alts||[]).length,
+    });
+    if (!error && data) setAlts(prev => [...(prev||[]), data]);
+  }
+  async function handleUpdateAlt(id, field, value) {
+    const parsed = (field==='qty'||field==='price') ? parseFloat(value)||0 : value;
+    setAlts(prev => prev.map(a => a.id===id ? { ...a, [field]: parsed } : a));
+    await window.dbHelpers.updateAlternate(id, { [field]: parsed });
+  }
+  async function handleDeleteAlt(id) {
+    if (!confirm('Remove this alternate?')) return;
+    const { error } = await window.dbHelpers.deleteAlternate(id);
+    if (!error) setAlts(prev => prev.filter(a => a.id !== id));
+  }
+
   // ── RENDER ──────────────────────────────────────────────────────
 
   if (!activeBidId) return (
@@ -309,14 +345,135 @@ function EstimatorView({ activeBidId }) {
           </div>
         </aside>
 
-        {/* Center — item grid or placeholder panels */}
+        {/* Center — item grid or info/alternates/placeholder panels */}
         <div style={{overflowY:'auto',background:'var(--bg)'}}>
-          {centerView !== 'grid' ? (
+          {centerView === 'info' ? (
+            <div style={{padding:'24px 28px',maxWidth:700}}>
+              <div className="page-title" style={{marginBottom:18}}>Project Info</div>
+              {/* Markup rates */}
+              <div style={{background:'var(--panel)',border:'1px solid var(--line)',borderRadius:'var(--r-lg,6px)',padding:'14px 18px',marginBottom:18}}>
+                <div style={{fontSize:11,textTransform:'uppercase',letterSpacing:'.07em',color:'var(--mute)',fontWeight:600,marginBottom:10}}>Markup Rates</div>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12}}>
+                  {[['oh_pct','Overhead %',15],['del_pct','Delivery %',5],['ins_pct','Install %',20]].map(([f,label,def]) => (
+                    <label key={f}>
+                      <div style={{fontSize:11.5,color:'var(--ink-3)',marginBottom:3}}>{label}</div>
+                      <input type="number" min="0" max="100" step="0.5"
+                        value={bid?.[f] ?? def}
+                        onChange={e=>handlePctChange(f, e.target.value)}
+                        style={{width:'100%',border:'1px solid var(--line)',borderRadius:'var(--r-sm,4px)',padding:'5px 8px',fontSize:13,fontFamily:'var(--mono)',background:'var(--bg)'}}/>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              {/* Bid metadata fields */}
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+                {[
+                  ['doc_type','Document Type','select',['Proposal','Quote','Bid','Budget','Change Order']],
+                  ['pricing_mode','Pricing Mode','select',['By Area','Lump Sum','Itemized']],
+                  ['project_id','Project ID','text',null],
+                  ['bid_date','Bid Date','date',null],
+                  ['gc_name','General Contractor','text',null],
+                  ['architect','Architect','text',null],
+                  ['bid_docs','Bid Documents','text',null],
+                  ['drawings_dated','Drawings Dated','date',null],
+                  ['specs_dated','Specs Dated','date',null],
+                  ['addendums','Addendums','text',null],
+                  ['estimator','Estimator','text',null],
+                  ['po_number','P.O. Number','text',null],
+                  ['terms','Terms','text',null],
+                  ['delivery_date','Delivery Date','date',null],
+                  ['attention','Attention','text',null],
+                ].map(([field,label,type,opts]) => (
+                  <label key={field}>
+                    <div style={{fontSize:11.5,color:'var(--ink-3)',marginBottom:3}}>{label}</div>
+                    {type==='select' ? (
+                      <select value={bid?.[field]||''} onChange={e=>{setBid(p=>({...p,[field]:e.target.value}));window.dbHelpers.updateBidInfo(activeBidId,{[field]:e.target.value});}}
+                        style={{width:'100%',border:'1px solid var(--line)',borderRadius:'var(--r-sm,4px)',padding:'5px 8px',fontSize:12.5,background:'var(--bg)'}}>
+                        <option value="">—</option>
+                        {opts.map(o=><option key={o}>{o}</option>)}
+                      </select>
+                    ) : (
+                      <input type={type} defaultValue={bid?.[field]||''}
+                        onBlur={e=>{setBid(p=>({...p,[field]:e.target.value}));window.dbHelpers.updateBidInfo(activeBidId,{[field]:e.target.value});}}
+                        style={{width:'100%',border:'1px solid var(--line)',borderRadius:'var(--r-sm,4px)',padding:'5px 8px',fontSize:12.5,background:'var(--bg)'}}/>
+                    )}
+                  </label>
+                ))}
+              </div>
+              <label style={{display:'block',marginTop:12}}>
+                <div style={{fontSize:11.5,color:'var(--ink-3)',marginBottom:3}}>Scope / Notes (internal)</div>
+                <textarea defaultValue={bid?.notes||''} rows={4}
+                  onBlur={e=>{setBid(p=>({...p,notes:e.target.value}));window.dbHelpers.updateBidInfo(activeBidId,{notes:e.target.value});}}
+                  style={{width:'100%',border:'1px solid var(--line)',borderRadius:'var(--r-sm,4px)',padding:'6px 8px',fontSize:12.5,background:'var(--bg)',resize:'vertical'}}/>
+              </label>
+            </div>
+          ) : centerView === 'alternates' ? (
+            <div style={{padding:'24px 28px'}}>
+              <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12}}>
+                <div className="page-title">Alternates</div>
+                <button className="btn sm accent" onClick={handleAddAlt}>+ Add Alternate</button>
+              </div>
+              <div style={{fontSize:12,color:'var(--ink-3)',marginBottom:12}}>
+                Alternates are listed separately and are not included in the Base Bid total.
+              </div>
+              {alts === null ? <window.Spinner /> : (
+                <table className="wf">
+                  <thead>
+                    <tr>
+                      <th style={{width:32,textAlign:'center'}}>#</th>
+                      <th>Description</th>
+                      <th style={{width:70}} className="num">Qty</th>
+                      <th style={{width:60}} className="ctr">Unit</th>
+                      <th style={{width:100}} className="num">Price $</th>
+                      <th style={{width:110}} className="num">Total</th>
+                      <th style={{width:32}}></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(alts||[]).map((alt,i) => (
+                      <tr key={alt.id}>
+                        <td style={{textAlign:'center',color:'var(--ink-3)',fontSize:12}}>{i+1}</td>
+                        <td><input className="inline-inp" defaultValue={alt.description}
+                          onBlur={e=>handleUpdateAlt(alt.id,'description',e.target.value)}
+                          onKeyDown={e=>e.key==='Enter'&&e.target.blur()}/></td>
+                        <td className="num"><input className="inline-inp num tnum" defaultValue={alt.qty}
+                          onBlur={e=>handleUpdateAlt(alt.id,'qty',e.target.value)}
+                          onKeyDown={e=>e.key==='Enter'&&e.target.blur()}/></td>
+                        <td className="ctr">
+                          <select value={alt.unit||'LS'} onChange={e=>handleUpdateAlt(alt.id,'unit',e.target.value)}
+                            style={{background:'transparent',border:'none',fontSize:11,fontFamily:'var(--mono)'}}>
+                            {['EA','LF','SF','SY','LS','HR'].map(u=><option key={u}>{u}</option>)}
+                          </select>
+                        </td>
+                        <td className="num"><input className="inline-inp num tnum" defaultValue={alt.price}
+                          onBlur={e=>handleUpdateAlt(alt.id,'price',e.target.value)}
+                          onKeyDown={e=>e.key==='Enter'&&e.target.blur()}/></td>
+                        <td className="num tnum" style={{fontWeight:600}}>{fmt((alt.qty||0)*(alt.price||0))}</td>
+                        <td className="ctr">
+                          <button className="btn ghost xs" style={{color:'var(--bad)'}} onClick={()=>handleDeleteAlt(alt.id)}>×</button>
+                        </td>
+                      </tr>
+                    ))}
+                    {(alts||[]).length === 0 && (
+                      <tr><td colSpan={7} style={{padding:'20px',textAlign:'center',color:'var(--ink-3)',fontSize:12}}>No alternates. Click "+ Add Alternate" to begin.</td></tr>
+                    )}
+                    {(alts||[]).length > 0 && (
+                      <tr style={{background:'var(--panel-alt)'}}>
+                        <td colSpan={5} style={{paddingLeft:14,fontSize:11.5,textTransform:'uppercase',letterSpacing:'.06em',color:'var(--ink-3)'}}>Alternates Total</td>
+                        <td className="num tnum" style={{fontWeight:700,color:'var(--accent)'}}>{fmt((alts||[]).reduce((s,a)=>s+(a.qty||0)*(a.price||0),0))}</td>
+                        <td></td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          ) : centerView !== 'grid' ? (
             <div style={{padding:'40px 24px',textAlign:'center',color:'var(--ink-3)',fontSize:13}}>
               <div style={{fontSize:15,fontWeight:600,color:'var(--ink-2)',marginBottom:8}}>
                 {centerView.charAt(0).toUpperCase()+centerView.slice(1)}
               </div>
-              Coming in the next plan (03-05b / 03-05c).
+              Coming in the next plan (03-05c).
             </div>
           ) : (
             (tree||[]).filter(a => !activeAreaId || a.id === activeAreaId).map(area => (
