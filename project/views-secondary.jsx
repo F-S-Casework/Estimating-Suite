@@ -111,80 +111,195 @@ function CalendarView() {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   LibraryView
+   LibraryView — live data from Supabase + Fuse.js search
 ───────────────────────────────────────────────────────────── */
-const LIB_CATS = ['All','Casework','Hardware','Finishing','Glass','Install'];
-const LIB_ROWS = [
-  { code:'CW-101', desc:'Base Cabinet — Full Height',     cat:'Casework',  uom:'LF', mat:285,  labor:72,  upd:'Mar 12' },
-  { code:'CW-102', desc:'Upper Cabinet — Standard',       cat:'Casework',  uom:'LF', mat:215,  labor:58,  upd:'Mar 12' },
-  { code:'CW-103', desc:'Tall Cabinet — Pantry Style',    cat:'Casework',  uom:'EA', mat:420,  labor:95,  upd:'Jan 8'  },
-  { code:'CW-104', desc:'Drawer Base Cabinet',            cat:'Casework',  uom:'EA', mat:310,  labor:65,  upd:'Mar 12' },
-  { code:'HW-201', desc:'Blum Tandem Plus Undermount',    cat:'Hardware',  uom:'PR', mat:38,   labor:12,  upd:'Apr 2'  },
-  { code:'HW-202', desc:'Grass Vionaro Undermount',       cat:'Hardware',  uom:'PR', mat:52,   labor:12,  upd:'Apr 2'  },
-  { code:'HW-203', desc:'Sugatsune Heavy Duty Hinge',     cat:'Hardware',  uom:'EA', mat:14,   labor:4,   upd:'Feb 18' },
-  { code:'HW-204', desc:'Rev-A-Shelf Pull-Out Organizer', cat:'Hardware',  uom:'EA', mat:68,   labor:18,  upd:'Mar 30' },
-  { code:'FN-301', desc:'Lacquer — Opaque Full Coat',     cat:'Finishing', uom:'SF', mat:3.20, labor:2.80,upd:'Apr 1'  },
-  { code:'FN-302', desc:'Veneer — Shop Applied',          cat:'Finishing', uom:'SF', mat:6.50, labor:3.50,upd:'Apr 1'  },
-  { code:'GL-401', desc:'Tempered Glass — 1/4"',          cat:'Glass',     uom:'SF', mat:22,   labor:8,   upd:'Feb 5'  },
-  { code:'GL-402', desc:'Laminated Safety Glass',         cat:'Glass',     uom:'SF', mat:38,   labor:10,  upd:'Feb 5'  },
-  { code:'IN-501', desc:'Installation — Casework',        cat:'Install',   uom:'LF', mat:0,    labor:42,  upd:'Apr 10' },
-  { code:'IN-502', desc:'Installation — Countertop',      cat:'Install',   uom:'LF', mat:0,    labor:28,  upd:'Apr 10' },
-  { code:'IN-503', desc:'Touch-up & Punch List',          cat:'Install',   uom:'HR', mat:0,    labor:85,  upd:'Apr 10' },
-];
-
 function LibraryView() {
-  const [cat, setCat] = useState('All');
-  const [q, setQ] = useState('');
-  const rows = useMemo(() => LIB_ROWS.filter(r => {
-    if (cat !== 'All' && r.cat !== cat) return false;
-    if (q) { const s = q.toLowerCase(); return r.desc.toLowerCase().includes(s) || r.code.toLowerCase().includes(s); }
-    return true;
-  }), [cat, q]);
+  const [libItems, setLibItems] = useState(null);
+  const [cat, setCat]           = useState('All');
+  const [searchQ, setSearchQ]   = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [editItem, setEditItem] = useState(null);  // null = add mode, object = edit mode
+  const [form, setForm]         = useState({ code:'', description:'', category:'', unit:'EA', material_cost:'', labor_cost:'' });
+  const [saving, setSaving]     = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      const { data } = await window.dbHelpers.getLibraryItems();
+      if (!cancelled) setLibItems(data || []);
+    }
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
+  const categories = useMemo(() => {
+    if (!libItems) return ['All'];
+    const cats = [...new Set(libItems.map(r => r.category).filter(Boolean))].sort();
+    return ['All', ...cats];
+  }, [libItems]);
+
+  const fuse = useMemo(() => {
+    if (!libItems || !libItems.length || typeof window.Fuse !== 'function') return null;
+    return new window.Fuse(libItems, { keys:['description','code','category'], threshold:0.3 });
+  }, [libItems]);
+
+  const rows = useMemo(() => {
+    if (!libItems) return [];
+    let base = cat === 'All' ? libItems : libItems.filter(r => r.category === cat);
+    if (!searchQ || !fuse) return base;
+    const fuseItems = fuse.search(searchQ).map(r => r.item);
+    return cat === 'All' ? fuseItems : fuseItems.filter(r => r.category === cat);
+  }, [libItems, cat, searchQ, fuse]);
+
+  function openAdd() {
+    setEditItem(null);
+    setForm({ code:'', description:'', category: cat !== 'All' ? cat : '', unit:'EA', material_cost:'', labor_cost:'' });
+    setShowForm(true);
+  }
+
+  function openEdit(item) {
+    setEditItem(item);
+    setForm({
+      code: item.code || '',
+      description: item.description || '',
+      category: item.category || '',
+      unit: item.unit || 'EA',
+      material_cost: item.material_cost != null ? String(item.material_cost) : '',
+      labor_cost: item.labor_cost != null ? String(item.labor_cost) : '',
+    });
+    setShowForm(true);
+  }
+
+  async function handleSave(e) {
+    e.preventDefault();
+    if (!form.description) return;
+    setSaving(true);
+    const payload = {
+      ...(editItem ? { id: editItem.id } : {}),
+      code: form.code || null,
+      description: form.description,
+      category: form.category || null,
+      unit: form.unit,
+      material_cost: parseFloat(form.material_cost) || 0,
+      labor_cost: parseFloat(form.labor_cost) || 0,
+      unit_cost: (parseFloat(form.material_cost) || 0) + (parseFloat(form.labor_cost) || 0),
+    };
+    const { data: saved, error } = await window.dbHelpers.upsertLibraryItem(payload);
+    setSaving(false);
+    if (error) { alert('Error saving: ' + error.message); return; }
+    if (saved) {
+      setLibItems(prev => {
+        if (editItem) return prev.map(r => r.id === saved.id ? saved : r);
+        return [saved, ...prev];
+      });
+    }
+    setShowForm(false);
+    setEditItem(null);
+  }
+
+  if (libItems === null) return <window.Spinner />;
 
   return (
     <div className="view active">
       <div className="page-head">
         <div>
           <h1 className="page-title">Pricing Library</h1>
-          <div className="page-sub">1,240 items · Last sync Apr 15, 2026</div>
+          <div className="page-sub">{libItems.length} items</div>
         </div>
         <div className="spacer"/>
         <div className="actions">
           <div style={{position:'relative', display:'flex', alignItems:'center'}}>
             <span style={{position:'absolute', left:8, opacity:.4, display:'flex', width:14, height:14}}><Icon.search/></span>
-            <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search items…" style={{paddingLeft:28, width:200, fontSize:12.5, border:'1px solid var(--line)', borderRadius:6, padding:'5px 10px 5px 28px', background:'var(--paper)', outline:'none'}}/>
+            <input value={searchQ} onChange={e=>setSearchQ(e.target.value)} placeholder="Search items…"
+              style={{paddingLeft:28, width:200, fontSize:12.5, border:'1px solid var(--line)', borderRadius:6, padding:'5px 10px 5px 28px', background:'var(--paper)', outline:'none'}}/>
           </div>
-          <button className="btn accent sm"><Icon.plus/> Add Item</button>
+          <button className="btn accent sm" onClick={openAdd}><Icon.plus/> Add Item</button>
         </div>
       </div>
+
       <div style={{padding:'12px 20px 0'}}>
         <div style={{display:'flex', gap:6, marginBottom:12, flexWrap:'wrap'}}>
-          {LIB_CATS.map(c => (
+          {categories.map(c => (
             <button key={c} onClick={()=>setCat(c)} className={`chip ${cat===c?'solid':''}`} style={{cursor:'pointer', fontWeight:cat===c?700:600}}>
-              {c}{c!=='All' && <span style={{opacity:.65, marginLeft:3}}>{LIB_ROWS.filter(r=>r.cat===c).length}</span>}
+              {c}{c!=='All' && <span style={{opacity:.65, marginLeft:3}}>{libItems.filter(r=>r.category===c).length}</span>}
             </button>
           ))}
         </div>
-        <table className="wf">
-          <thead><tr>
-            <th style={{width:76}}>Code</th><th>Description</th><th style={{width:50}}>Unit</th>
-            <th className="num" style={{width:86}}>Material</th><th className="num" style={{width:76}}>Labor</th>
-            <th className="num" style={{width:86}}>Total</th><th style={{width:70, color:'var(--mute)'}}>Updated</th>
-          </tr></thead>
-          <tbody>
-            {rows.map(r => (
-              <tr key={r.code}>
-                <td style={{fontFamily:'var(--mono)', fontSize:11}}>{r.code}</td>
-                <td>{r.desc}</td>
-                <td style={{color:'var(--ink-3)'}}>{r.uom}</td>
-                <td className="num tnum">{fmt$(r.mat)}</td>
-                <td className="num tnum">{fmt$(r.labor)}</td>
-                <td className="num tnum" style={{fontWeight:600}}>{fmt$(r.mat+r.labor)}</td>
-                <td style={{fontSize:11, color:'var(--ink-3)'}}>{r.upd}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+
+        {showForm && (
+          <form className="card" style={{padding:'14px 16px', marginBottom:12, borderColor:'var(--accent)', borderWidth:1.5}} onSubmit={handleSave}>
+            <div style={{display:'grid', gridTemplateColumns:'80px 1fr 120px 80px 90px 90px auto', gap:8, alignItems:'flex-end'}}>
+              <div>
+                <div style={{fontSize:10.5,fontWeight:700,color:'var(--mute)',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:3}}>Code</div>
+                <input value={form.code} onChange={e=>setForm(f=>({...f,code:e.target.value}))} placeholder="CW-101"
+                  style={{width:'100%',border:'1px solid var(--line)',borderRadius:'var(--r-sm)',padding:'5px 8px',fontSize:12,background:'var(--paper)'}}/>
+              </div>
+              <div>
+                <div style={{fontSize:10.5,fontWeight:700,color:'var(--mute)',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:3}}>Description *</div>
+                <input required value={form.description} onChange={e=>setForm(f=>({...f,description:e.target.value}))} placeholder="Base Cabinet — Full Height"
+                  style={{width:'100%',border:'1px solid var(--line)',borderRadius:'var(--r-sm)',padding:'5px 8px',fontSize:12,background:'var(--paper)'}}/>
+              </div>
+              <div>
+                <div style={{fontSize:10.5,fontWeight:700,color:'var(--mute)',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:3}}>Category</div>
+                <input value={form.category} onChange={e=>setForm(f=>({...f,category:e.target.value}))} placeholder="Casework"
+                  style={{width:'100%',border:'1px solid var(--line)',borderRadius:'var(--r-sm)',padding:'5px 8px',fontSize:12,background:'var(--paper)'}}/>
+              </div>
+              <div>
+                <div style={{fontSize:10.5,fontWeight:700,color:'var(--mute)',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:3}}>Unit</div>
+                <select value={form.unit} onChange={e=>setForm(f=>({...f,unit:e.target.value}))}
+                  style={{width:'100%',border:'1px solid var(--line)',borderRadius:'var(--r-sm)',padding:'5px 8px',fontSize:12,background:'var(--paper)'}}>
+                  {['EA','LF','SF','SY','CY','LS','HR','TON'].map(u=><option key={u}>{u}</option>)}
+                </select>
+              </div>
+              <div>
+                <div style={{fontSize:10.5,fontWeight:700,color:'var(--mute)',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:3}}>Material $</div>
+                <input type="number" step="0.01" value={form.material_cost} onChange={e=>setForm(f=>({...f,material_cost:e.target.value}))} placeholder="0.00"
+                  style={{width:'100%',border:'1px solid var(--line)',borderRadius:'var(--r-sm)',padding:'5px 8px',fontSize:12,background:'var(--paper)'}}/>
+              </div>
+              <div>
+                <div style={{fontSize:10.5,fontWeight:700,color:'var(--mute)',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:3}}>Labor $</div>
+                <input type="number" step="0.01" value={form.labor_cost} onChange={e=>setForm(f=>({...f,labor_cost:e.target.value}))} placeholder="0.00"
+                  style={{width:'100%',border:'1px solid var(--line)',borderRadius:'var(--r-sm)',padding:'5px 8px',fontSize:12,background:'var(--paper)'}}/>
+              </div>
+              <div style={{display:'flex',gap:4,paddingBottom:1}}>
+                <button className="btn accent sm" type="submit" disabled={saving}>{saving?'Saving…':'Save'}</button>
+                <button className="btn ghost sm" type="button" onClick={()=>setShowForm(false)}>Cancel</button>
+              </div>
+            </div>
+          </form>
+        )}
+
+        {libItems.length === 0 ? (
+          <window.EmptyState
+            heading="Pricing library is empty"
+            body="Import items via the Supabase dashboard, or add items manually."
+            action={{ label:'Add Item', onClick:openAdd }}
+          />
+        ) : rows.length === 0 ? (
+          <div className="muted" style={{padding:'24px 0', textAlign:'center', fontSize:12}}>No items match your search.</div>
+        ) : (
+          <table className="wf">
+            <thead><tr>
+              <th style={{width:76}}>Code</th><th>Description</th><th style={{width:80}}>Category</th>
+              <th style={{width:50}}>Unit</th>
+              <th className="num" style={{width:86}}>Material</th><th className="num" style={{width:76}}>Labor</th>
+              <th className="num" style={{width:86}}>Total</th>
+            </tr></thead>
+            <tbody>
+              {rows.map(r => (
+                <tr key={r.id} style={{cursor:'pointer'}} onClick={() => openEdit(r)}>
+                  <td style={{fontFamily:'var(--mono)', fontSize:11}}>{r.code || '—'}</td>
+                  <td>{r.description}</td>
+                  <td style={{color:'var(--ink-3)', fontSize:11.5}}>{r.category || '—'}</td>
+                  <td style={{color:'var(--ink-3)'}}>{r.unit || '—'}</td>
+                  <td className="num tnum">{fmt$(r.material_cost || 0)}</td>
+                  <td className="num tnum">{fmt$(r.labor_cost || 0)}</td>
+                  <td className="num tnum" style={{fontWeight:600}}>{fmt$((r.material_cost||0)+(r.labor_cost||0))}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
