@@ -1,134 +1,95 @@
 // Jobs list + Job detail + Change Orders
+const { useState: uS_jobs, useEffect: uE_jobs } = React;
 
 function JobsView() {
-  const rows = [
-    { id:'26-041', name:'Caldwell Clinic',          gc:'Engelmann',  pm:'G', val:312400, co:0,     dates:'May 18 → May 24', status:'Shop',       docs:12, act:'Geoff · 2h' },
-    { id:'26-040', name:'Ada Co. Courthouse',       gc:'Turner',     pm:'P', val:648200, co:24800, dates:'Now → May 2',      status:'Installing', docs:28, act:'Pat · yest' },
-    { id:'26-038', name:'Treasure Valley HS',       gc:'Hoffman',    pm:'J', val:184000, co:0,     dates:'Jun 3 → Jun 8',    status:'Ready',      docs:8,  act:'Joe · 3d' },
-    { id:'26-035', name:'Nampa Library',            gc:'Engelmann',  pm:'G', val:194000, co:-3200, dates:'May 11 → May 14',  status:'Shop',       docs:14, act:'Pat · 1h' },
-    { id:'26-031', name:'Boise Medical · Ph 2',     gc:'Turner',     pm:'P', val:412500, co:0,     dates:'TBD',              status:'Held',       docs:22, act:'last wk' },
-    { id:'26-028', name:'Meridian Dental',          gc:'Hoffman',    pm:'J', val:88200,  co:0,     dates:'Apr 8 → Apr 10 ✓', status:'Installed',  docs:19, act:'closed' },
-  ];
+  const [jobs, setJobs]   = uS_jobs(null);
+  const [error, setError] = uS_jobs(null);
+
+  uE_jobs(() => {
+    let cancelled = false;
+    async function load() {
+      const { data, error: err } = await window.dbHelpers.getJobs();
+      if (!cancelled) {
+        if (err) setError(err.message);
+        else setJobs(data || []);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
+  const fmt = n => '$' + Number(n || 0).toLocaleString();
+
   const statusChip = (s) => {
     const m = { 'Shop':'warn', 'Installing':'accent', 'Ready':'', 'Held':'bad', 'Installed':'ok' };
     return <span className={`chip ${m[s]||''}`}>{s}</span>;
   };
-  const fmt = n => '$'+Number(n).toLocaleString();
+
+  if (jobs === null && !error) return <window.Spinner />;
+
+  if (error) return (
+    <div style={{padding:40, color:'var(--bad)'}}>
+      Something went wrong — check your connection and try again.
+      <button className="btn ghost sm" style={{marginLeft:12}} onClick={() => { setError(null); setJobs(null); }}>Retry</button>
+    </div>
+  );
 
   return (
     <div className="view active">
       <div className="page-head">
         <div>
           <div className="page-title">Jobs</div>
-          <div className="page-sub">18 active · <b>$2.4M backlog</b> · 6 installing ≤ 30d</div>
+          <div className="page-sub">{jobs.length} active {jobs.length === 1 ? 'job' : 'jobs'}</div>
         </div>
         <div className="spacer"></div>
         <div className="actions">
-          <span className="chip solid">All PMs</span>
-          <span className="chip">Status · any</span>
-          <span className="chip">Installing · 30d</span>
-          <button className="btn ghost sm"><Icon.filter/> More</button>
+          <button className="btn ghost sm"><Icon.filter/> Filter</button>
         </div>
       </div>
 
       <div style={{padding:'16px 24px 40px'}}>
-        <div className="g4 mb">
-          <div className="card kpi"><div className="lbl">Contracted</div><div className="val tnum">$2.4M</div><div className="sub">18 active jobs</div></div>
-          <div className="card kpi"><div className="lbl">Approved COs</div><div className="val tnum" style={{color:'var(--ok)'}}>+$86k</div><div className="sub">7 jobs affected</div></div>
-          <div className="card kpi"><div className="lbl">Installing ≤ 30d</div><div className="val tnum">6 jobs</div><div className="sub">$1.22M value</div></div>
-          <div className="card kpi"><div className="lbl">Crew capacity</div><div className="val tnum">72%</div><div className="sub"><div className="bar" style={{width:140}}><span style={{width:'72%'}}></span></div></div></div>
-        </div>
-
-        <div className="card">
-          <div className="card-head">
-            <h3>Active jobs</h3>
-            <span className="muted" style={{fontSize:11.5,marginLeft:6}}>sorted by install date</span>
-            <div style={{flex:1}}></div>
-            <button className="btn sm">Export</button>
-          </div>
-          <table className="wf">
-            <thead><tr>
-              <th style={{paddingLeft:16,width:80}}>Job #</th>
-              <th>Project</th>
-              <th style={{width:60}}>PM</th>
-              <th style={{width:110}}>Status</th>
-              <th className="num" style={{width:110}}>Value</th>
-              <th className="num" style={{width:110}}>Net CO</th>
-              <th style={{width:180}}>Install window</th>
-              <th style={{width:60}} className="ctr">Docs</th>
-              <th style={{width:110,paddingRight:16}}>Activity</th>
-            </tr></thead>
-            <tbody>
-              {rows.map((r,i)=>(
-                <tr key={i} style={{cursor:'pointer'}} onClick={()=>window.__go('job')}>
-                  <td style={{paddingLeft:16}} className="tnum"><b>{r.id}</b></td>
-                  <td>
-                    <div style={{fontWeight:600}}>{r.name}</div>
-                    <div className="muted" style={{fontSize:11.5}}>{r.gc}</div>
-                  </td>
-                  <td><span className={`pm ${r.pm.toLowerCase()}`}>{r.pm}</span></td>
-                  <td>{statusChip(r.status)}</td>
-                  <td className="num tnum" style={{fontWeight:600}}>{fmt(r.val)}</td>
-                  <td className="num tnum" style={{color: r.co>0?'var(--ok)':r.co<0?'var(--bad)':'var(--ink-3)'}}>{r.co?(r.co>0?'+':'')+fmt(r.co):'—'}</td>
-                  <td style={{fontSize:12}}>{r.dates}</td>
-                  <td className="ctr"><span className="chip mono">{r.docs}</span></td>
-                  <td className="muted" style={{fontSize:11.5,paddingRight:16}}>{r.act}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="g2 mt">
-          <div className="card pad has-annot">
-            <div className="row" style={{alignItems:'center'}}>
-              <h3 style={{margin:0,fontSize:13}}>Install capacity · May 2026</h3>
+        {jobs.length === 0 ? (
+          <window.EmptyState
+            heading="No active jobs"
+            body="Jobs appear here when bids are marked as Won."
+          />
+        ) : (
+          <div className="card">
+            <div className="card-head">
+              <h3>Active jobs</h3>
               <div style={{flex:1}}></div>
-              <span className="chip">‹ Prev</span><span className="chip">Next ›</span>
             </div>
-            <div className="cal mt-sm">
-              {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(h=><div className="hd" key={h}>{h}</div>)}
-              <div className="d om"><span className="n">26</span></div>
-              <div className="d c1"><span className="n">27</span><span className="pill g">Nampa · prep</span></div>
-              <div className="d c2"><span className="n">28</span><span className="pill g">Nampa · load</span></div>
-              <div className="d om"><span className="n">29</span></div>
-              <div className="d om"><span className="n">30</span></div>
-              <div className="d c2"><span className="n">May 1</span><span className="pill p">Ada · day 6</span></div>
-              <div className="d c2"><span className="n">2</span><span className="pill p">Ada · final</span></div>
-              <div className="d om"><span className="n">3</span></div>
-              <div className="d om"><span className="n">4</span></div>
-              <div className="d om"><span className="n">5</span></div>
-              <div className="d c3 today"><span className="n">6</span><span className="pill j">TVHS · mock</span><span className="pill g">Nampa</span></div>
-              <div className="d c3"><span className="n">7</span><span className="pill j">TVHS</span><span className="pill g">Nampa</span></div>
-              <div className="d c2"><span className="n">8</span><span className="pill j">TVHS</span></div>
-              <div className="d c1"><span className="n">9</span></div>
-              <div className="d c3"><span className="n">11</span><span className="pill g">Nampa · install</span></div>
-              <div className="d c3"><span className="n">12</span><span className="pill g">Nampa</span></div>
-              <div className="d c2"><span className="n">13</span><span className="pill g">Nampa</span></div>
-              <div className="d c2"><span className="n">14</span><span className="pill g">Nampa</span></div>
-              <div className="d om"><span className="n">15</span></div>
-              <div className="d om"><span className="n">16</span></div>
-              <div className="d om"><span className="n">17</span></div>
-              <div className="d c4"><span className="n">18</span><span className="pill g">Caldwell</span></div>
-              <div className="d c4"><span className="n">19</span><span className="pill g">Caldwell</span></div>
-              <div className="d c3"><span className="n">20</span><span className="pill g">Caldwell</span></div>
-              <div className="d c3"><span className="n">21</span><span className="pill g">Caldwell</span></div>
-              <div className="d c2"><span className="n">22</span></div>
-              <div className="d om"><span className="n">23</span></div>
-              <div className="d om"><span className="n">24</span></div>
-            </div>
-            <span className="annot" style={{top:92,right:24}}>Watch week<br/>of May 18 —<br/>Caldwell + G<br/>stacked</span>
+            <table className="wf">
+              <thead><tr>
+                <th style={{paddingLeft:16, width:80}}>Job #</th>
+                <th>Project</th>
+                <th style={{width:110}}>Status</th>
+                <th className="num" style={{width:120}}>Value</th>
+                <th style={{width:180}}>Install Window</th>
+                <th style={{width:110, paddingRight:16}}>GC</th>
+              </tr></thead>
+              <tbody>
+                {jobs.map((r) => (
+                  <tr key={r.id} style={{cursor:'pointer'}} onClick={() => { window.__activeJob = r; window.__go && window.__go('job'); }}>
+                    <td style={{paddingLeft:16}} className="tnum"><b>{r.number}</b></td>
+                    <td>
+                      <div style={{fontWeight:600}}>{r.name}</div>
+                      {r.address && <div className="muted" style={{fontSize:11.5}}>{r.address}</div>}
+                    </td>
+                    <td>{statusChip(r.status)}</td>
+                    <td className="num tnum" style={{fontWeight:600}}>{r.contract_value ? fmt(r.contract_value) : '—'}</td>
+                    <td style={{fontSize:12}}>
+                      {r.install_start
+                        ? `${r.install_start}${r.install_end ? ' → ' + r.install_end : ''}`
+                        : <span className="muted">TBD</span>}
+                    </td>
+                    <td className="muted" style={{fontSize:12, paddingRight:16}}>{r.gc_name || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-
-          <div className="card pad">
-            <h3 style={{margin:0,fontSize:13}}>Open risks</h3>
-            <div className="muted" style={{fontSize:11.5,marginTop:2,marginBottom:10}}>Across active jobs</div>
-            <div className="row-list"><div className="flex"><div className="title">Boise Medical · Ph 2 — held</div><div className="meta">Owner decision pending · 12d</div></div><span className="chip bad">HELD</span></div>
-            <div className="row-list"><div className="flex"><div className="title">Ada Co. · CO-03 unsigned</div><div className="meta">Turner PM · 6d open</div></div><span className="chip warn">CO</span></div>
-            <div className="row-list"><div className="flex"><div className="title">Nampa Library · ship −2d</div><div className="meta">Edge-band delayed · Geoff</div></div><span className="chip warn">SCHED</span></div>
-            <div className="row-list"><div className="flex"><div className="title">TVHS · mockup approval late</div><div className="meta">Hoffman PM not responding</div></div><span className="chip">FLAG</span></div>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );
@@ -136,102 +97,93 @@ function JobsView() {
 
 // ── JOB DETAIL ─────────────────────────────────────────
 function JobView() {
+  const job = window.__activeJob || {};
+  const fmtV = n => n ? '$' + Number(n).toLocaleString(undefined, {maximumFractionDigits:0}) : '—';
+  const fmtDate = d => d ? new Date(d + 'T00:00:00').toLocaleDateString(undefined, {month:'short',day:'numeric',year:'numeric'}) : 'TBD';
+
+  const [cos, setCos] = uS_jobs(null);
+  uE_jobs(() => {
+    if (!job.id) { setCos([]); return; }
+    let cancelled = false;
+    async function load() {
+      const { data } = await window.sb.from('change_orders').select('*').eq('job_id', job.id).order('created_at');
+      if (!cancelled) setCos(data || []);
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [job.id]);
+
+  const approvedCOs = (cos || []).filter(c => c.status === 'APV' || c.status === 'Approved');
+  const netCOs = approvedCOs.reduce((sum, c) => sum + Number(c.amount || 0), 0);
+  const netValue = Number(job.contract_value || 0) + netCOs;
+  const installWindow = job.install_start
+    ? `${fmtDate(job.install_start)}${job.install_end ? ' → ' + fmtDate(job.install_end) : ''}`
+    : 'TBD';
+
+  if (!job.id) return (
+    <div className="view active" style={{display:'flex',alignItems:'center',justifyContent:'center',height:'60vh'}}>
+      <window.EmptyState heading="No job selected" body="Select a job from the Jobs list." />
+    </div>
+  );
+
   return (
     <div className="view active">
       <div className="page-head">
         <div>
-          <div className="eyebrow">Job 26-040 · Turner · Ada Co. Courthouse · Boise ID</div>
-          <div className="page-title">Ada Co. Courthouse</div>
-          <div className="page-sub">PM <span className="pm p" style={{marginLeft:4}}>P</span> Pat · <b>Installing · day 3/7</b> · ship date met</div>
+          <div className="eyebrow">Job {job.number}{job.gc_name ? ' · ' + job.gc_name : ''}{job.address ? ' · ' + job.address : ''}</div>
+          <div className="page-title">{job.name}</div>
+          <div className="page-sub">Install: <b>{installWindow}</b></div>
         </div>
         <div className="spacer"></div>
         <div className="actions">
-          <div className="bid-totals" style={{marginLeft:0}}>
-            <div className="t"><span className="l">Contract</span><span className="v">$648,200</span></div>
+          <button className="btn ghost sm" onClick={() => window.__go && window.__go('jobs')}><Icon.back/> Jobs</button>
+          <div className="bid-totals" style={{marginLeft:12}}>
+            <div className="t"><span className="l">Contract</span><span className="v">{fmtV(job.contract_value)}</span></div>
+            {netCOs !== 0 && (<><div className="divider"></div>
+            <div className="t"><span className="l">Net COs</span><span className="v" style={{color:netCOs>=0?'var(--ok)':'var(--bad)'}}>{netCOs>=0?'+':''}{fmtV(netCOs)}</span></div></>)}
             <div className="divider"></div>
-            <div className="t"><span className="l">Net COs</span><span className="v" style={{color:'var(--ok)'}}>+$24,800</span></div>
-            <div className="divider"></div>
-            <div className="t main"><span className="l">Current</span><span className="v">$673,000</span></div>
+            <div className="t main"><span className="l">Net value</span><span className="v">{fmtV(netValue)}</span></div>
           </div>
         </div>
       </div>
 
       <div style={{padding:'18px 24px 40px'}}>
-        {/* stripe: contract evolution */}
-        <div style={{position:'relative',marginBottom:22}}>
-          <div className="stripe-wrap">
-            <div className="seg base">Original $648.2k</div>
-            <div className="seg add1">+CO-01</div>
-            <div className="seg add2">+CO-02</div>
-            <div className="seg ded1">−CO-03</div>
-            <div className="seg draft">CO-04 draft</div>
+        <div className="card pad">
+          <h3 style={{margin:'0 0 10px',fontSize:13}}>Job details</h3>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:14}}>
+            <div><div className="muted" style={{fontSize:11,textTransform:'uppercase'}}>Status</div><div style={{marginTop:4}}><span className={`chip ${({Shop:'warn',Installing:'accent',Held:'bad',Installed:'ok'})[job.status]||''}`}>{job.status}</span></div></div>
+            <div><div className="muted" style={{fontSize:11,textTransform:'uppercase'}}>GC</div><div style={{marginTop:4}}>{job.gc_name || '—'}</div></div>
+            <div><div className="muted" style={{fontSize:11,textTransform:'uppercase'}}>Install window</div><div style={{marginTop:4,fontSize:12}}>{installWindow}</div></div>
           </div>
-          <span className="annot" style={{top:-10,right:4}}>margin<br/>21.4 → 22.1%</span>
+          {job.notes && <div style={{marginTop:12,fontSize:12,color:'var(--ink-2)'}}>{job.notes}</div>}
         </div>
 
-        <div style={{display:'grid',gridTemplateColumns:'2fr 1fr',gap:14}}>
-          {/* left: timeline + scope */}
-          <div className="stack" style={{gap:14}}>
-            <div className="card pad">
-              <h3 style={{margin:'0 0 10px',fontSize:13}}>Project timeline</h3>
-              <div className="tl">
-                <div className="tl-node done"><div className="when">Mar 20</div><div className="what">Awarded · contract signed</div><div className="detail">$648,200 · Turner LOI attached</div></div>
-                <div className="tl-node done"><div className="when">Apr 1</div><div className="what">Shop start</div><div className="detail">Geoff released CNC files · material received Apr 3</div></div>
-                <div className="tl-node done"><div className="when">Apr 8 · CO-01 approved</div><div className="what">Add (3) full-height file cabs, L2 corridor</div><div className="detail" style={{color:'var(--ok)'}}>+$8,420 · +1 day · owner request</div></div>
-                <div className="tl-node done"><div className="when">Apr 15 · CO-02 approved</div><div className="what">Upgrade lab counters to epoxy resin</div><div className="detail" style={{color:'var(--ok)'}}>+$16,380 · spec ASI-03</div></div>
-                <div className="tl-node done"><div className="when">Apr 18</div><div className="what">Install kickoff · day 1/7</div><div className="detail">Crew P · 3 techs + lead</div></div>
-                <div className="tl-node now"><div className="when">Today · Apr 21</div><div className="what">Installing — L1 casework complete, starting L2</div><div className="detail">Photo log: 14 uploads · Pat</div></div>
-                <div className="tl-node"><div className="when">Apr 25 (projected)</div><div className="what">Install complete · punch walk</div></div>
-                <div className="tl-node"><div className="when">May 2</div><div className="what">Close &amp; final invoice</div></div>
-              </div>
-            </div>
-
-            <div className="card">
-              <div className="card-head"><h3>Scope &amp; line items</h3><span className="muted" style={{fontSize:11.5,marginLeft:6}}>contract + COs</span><div style={{flex:1}}></div><button className="btn sm">Open in estimator</button></div>
-              <table className="wf">
-                <thead><tr><th style={{paddingLeft:16}}>Area</th><th>Category</th><th className="num">Qty</th><th>UOM</th><th className="num" style={{paddingRight:16}}>Ext $</th></tr></thead>
-                <tbody>
-                  <tr className="sec"><td colSpan={5}>Base scope <span className="tot tnum">$648,200</span></td></tr>
-                  <tr><td style={{paddingLeft:16}}>Lab L1</td><td>Casework</td><td className="num tnum">62</td><td>lf</td><td className="num tnum" style={{paddingRight:16}}>$84,120</td></tr>
-                  <tr><td style={{paddingLeft:16}}>Lab L1</td><td>Counters</td><td className="num tnum">110</td><td>lf</td><td className="num tnum" style={{paddingRight:16}}>$22,460</td></tr>
-                  <tr><td style={{paddingLeft:16}}>Lab L2</td><td>Casework</td><td className="num tnum">58</td><td>lf</td><td className="num tnum" style={{paddingRight:16}}>$81,200</td></tr>
-                  <tr><td style={{paddingLeft:16}}>Offices</td><td>Millwork</td><td className="num tnum">1</td><td>LS</td><td className="num tnum" style={{paddingRight:16}}>$48,000</td></tr>
-                  <tr className="sec"><td colSpan={5}>Change orders <span className="tot tnum">+$24,800</span></td></tr>
-                  <tr><td style={{paddingLeft:16}}>L2 Corridor</td><td>FH File Cabs (CO-01)</td><td className="num tnum">3</td><td>ea</td><td className="num tnum" style={{paddingRight:16,color:'var(--ok)'}}>+$8,420</td></tr>
-                  <tr><td style={{paddingLeft:16}}>Lab 214/215</td><td>Epoxy counters (CO-02)</td><td className="num tnum">46</td><td>lf</td><td className="num tnum" style={{paddingRight:16,color:'var(--ok)'}}>+$16,380</td></tr>
-                </tbody>
-              </table>
-            </div>
+        {cos === null ? <window.Spinner /> : cos.length > 0 && (
+          <div className="card" style={{marginTop:14}}>
+            <div className="card-head"><h3>Change orders</h3></div>
+            <table className="wf">
+              <thead><tr>
+                <th style={{paddingLeft:16}}>Description</th>
+                <th style={{width:100}}>Status</th>
+                <th className="num" style={{width:130,paddingRight:16}}>Amount</th>
+              </tr></thead>
+              <tbody>
+                {cos.map(c => (
+                  <tr key={c.id}>
+                    <td style={{paddingLeft:16}}>{c.description || c.title || '—'}</td>
+                    <td><span className={`chip ${c.status==='APV'||c.status==='Approved'?'ok':'warn'}`}>{c.status}</span></td>
+                    <td className="num tnum" style={{paddingRight:16,color:Number(c.amount||0)>=0?'var(--ok)':'var(--bad)'}}>
+                      {Number(c.amount||0)>=0?'+':''}{fmtV(c.amount)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
+        )}
 
-          {/* right: docs + activity + change orders summary */}
-          <div className="stack" style={{gap:14}}>
-            <div className="card pad">
-              <div className="row" style={{alignItems:'center'}}><h3 style={{margin:0,fontSize:13}}>Change orders</h3><div style={{flex:1}}></div><button className="btn ghost sm" onClick={()=>window.__go('co')}>Open log →</button></div>
-              <div className="row-list"><div className="flex"><div className="title">CO-01 · Add (3) FH file cabs L2</div><div className="meta">Owner · signed Apr 8</div></div><span className="chip ok">+$8,420</span></div>
-              <div className="row-list"><div className="flex"><div className="title">CO-02 · Epoxy counter upgrade</div><div className="meta">Spec ASI-03 · signed Apr 15</div></div><span className="chip ok">+$16,380</span></div>
-              <div className="row-list"><div className="flex"><div className="title">CO-03 · Delete break uppers (VE)</div><div className="meta">draft · awaiting sig · 6d</div></div><span className="chip warn">−$3,200</span></div>
-              <div className="row-list"><div className="flex"><div className="title">CO-04 · Corner guards 201-208</div><div className="meta">Owner email Apr 20 · drafting</div></div><span className="chip">+$1,136</span></div>
-              <button className="btn accent sm" style={{marginTop:8}} onClick={()=>window.__go('co')}>+ New change order</button>
-            </div>
-
-            <div className="card pad">
-              <h3 style={{margin:'0 0 8px',fontSize:13}}>Documents <span className="muted" style={{fontWeight:500}}>· 28 files</span></h3>
-              <div className="row-list"><div className="flex"><div className="title">📐 Plans_IFC_2026-04-18.pdf</div><div className="meta">Evan · yesterday</div></div></div>
-              <div className="row-list"><div className="flex"><div className="title">📋 Spec_12-35-30.pdf</div><div className="meta">Evan · yesterday</div></div></div>
-              <div className="row-list"><div className="flex"><div className="title">🧾 CO-02 signed.pdf</div><div className="meta">Pat · Apr 15</div></div></div>
-              <div className="row-list"><div className="flex"><div className="title">📄 Contract + LOI.pdf</div><div className="meta">locked · Mar 20</div></div></div>
-              <div className="row-list"><div className="flex"><div className="title">📷 Install photos (14)</div><div className="meta">Pat · today</div></div></div>
-            </div>
-
-            <div className="card pad">
-              <h3 style={{margin:'0 0 8px',fontSize:13}}>Activity</h3>
-              <div className="act"><div className="who" style={{background:'#f3e3c3',color:'#7a5514'}}>P</div><div className="body"><div><b>Pat</b> uploaded 4 photos · L1 casework complete.</div><div className="when">2h ago</div></div></div>
-              <div className="act"><div className="who" style={{background:'#f3e3c3',color:'#7a5514'}}>P</div><div className="body"><div><b>Pat</b> started CO-03 draft (VE deduct).</div><div className="when">yesterday</div></div></div>
-              <div className="act"><div className="who">EP</div><div className="body"><div><b>Evan</b> forwarded owner email → CO-04 draft created.</div><div className="when">yesterday</div></div></div>
-              <div className="act"><div className="who">SYS</div><div className="body"><div>CO-02 PDF stamped &amp; countersigned.</div><div className="when">Apr 15</div></div></div>
-            </div>
-          </div>
+        <div className="card pad" style={{marginTop:14}}>
+          <div className="muted" style={{fontSize:12}}>Full timeline, documents, and activity log will be available in Phase 5 (Cross-View Workflow).</div>
         </div>
       </div>
     </div>
