@@ -61,6 +61,17 @@
 **Dependencies:** Phase 2
 **UI hint:** yes
 **Complexity:** high
+**Plans:** 8 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Schema migrations + Spinner/EmptyState components + Fuse.js CDN in index.html
+- [ ] 03-02-PLAN.md — supabase.js query helpers (getBids, addBid, updateBidStage, getLineItems, addLineItem, updateLineItem, deleteLineItem, getLibraryItems, upsertLibraryItem, getJobs, getContacts, addContact, updateContact)
+- [ ] 03-03-PLAN.md — shell.jsx activeBidId threading + openBid prop passing + dynamic estimator crumb
+- [ ] 03-04-PLAN.md — views-home.jsx PipelineView live data + create bid inline form + stage advance buttons
+- [ ] 03-05-PLAN.md — views-estimator.jsx live line items + inline CRUD + library insert + bid header
+- [ ] 03-06-PLAN.md — views-jobs.jsx JobsView live data
+- [ ] 03-07-PLAN.md — views-secondary.jsx LibraryView live data + Fuse.js search + add/edit item form
+- [ ] 03-08-PLAN.md — views-secondary.jsx ContactsView live data + add/edit contact form
 
 ### Success Criteria
 1. Creating a new bid from the Pipeline view persists the record and it appears immediately in the kanban board after reload.
@@ -69,12 +80,14 @@
 4. Searching or filtering the Pricing Library queries Supabase and returns matching items; inserting an item snapshots its price into the estimate.
 5. All views display a spinner while data loads and a descriptive empty state when the table has no rows.
 
-### Key Files
-- `project/views-primary.jsx` — replace sample arrays in PipelineView, EstimatorView, JobsView, JobDetailView with Supabase queries; add loading/empty states
-- `project/views-secondary.jsx` — replace sample arrays in LibraryView, ContactsView, CalendarView with Supabase queries; add loading/empty states
-- `project/supabase.js` — add reusable query helpers (getBids, getJobs, getLineItems, getLibraryItems, getContacts)
-- `project/app.jsx` — ensure Fuse.js CDN tag present for library fuzzy search
-- `project/index.html` — add Fuse.js CDN tag
+### Key Files (corrected per D-16)
+- `project/views-home.jsx` — PipelineView live data (ROADMAP previously listed wrong filename views-primary.jsx)
+- `project/views-estimator.jsx` — EstimatorView live line items
+- `project/views-jobs.jsx` — JobsView live data
+- `project/views-secondary.jsx` — LibraryView and ContactsView live data
+- `project/supabase.js` — all query helpers on window.dbHelpers
+- `project/shell.jsx` — activeBidId state + Spinner/EmptyState components
+- `project/index.html` — Fuse.js CDN tag
 
 ---
 
