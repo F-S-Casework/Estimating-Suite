@@ -1,4 +1,6 @@
 // Home + Pipeline views
+const { useState: uS_home, useEffect: uE_home, useMemo: uM_home } = React;
+
 const HomeView = () => {
   const kpis = [
     { l:'Active bids',      v:'12',      sub:'3 due this week', accent:true },
@@ -172,79 +174,159 @@ const HomeView = () => {
 };
 
 // ── Pipeline kanban ───────────────────────────────────
-const PipelineView = () => {
-  const cols = [
-    { id:'lead', t:'Lead / ITB received', items:[
-      { c:'Garfield County', n:'Fleet wash bay — Rifle', m:'PW · Hard bid', d:'Due Dec 18', v:'$480k', pm:'JM', tags:['PW','Single-trade'] },
-      { c:'Signal Peak Health', n:'Outpatient fit-out', m:'Negotiated', d:'Due Dec 22', v:'—', pm:'EP', tags:['Healthcare'] },
-      { c:'Treasure Valley CC', n:'Welding lab expansion', m:'Design-build', d:'Due Jan 6', v:'~$1.4M', pm:'GR', tags:['Education','DB'] },
-    ]},
-    { id:'qty', t:'Quantities', items:[
-      { c:'Boise School Dist.', n:'West Middle — Reroof', m:'Hard bid', d:'Due Dec 10', v:'$390k', pm:'PN', tags:['Education'], urgent:true },
-      { c:'Sundial Dev.', n:'Fairfax Apts — Ph.2', m:'Negotiated', d:'Due Dec 9', v:'$640k', pm:'JM', tags:['Multifamily'] },
-    ]},
-    { id:'price', t:'Pricing', items:[
-      { c:'TriState Mech.', n:'Denver Regional Lab', m:'CMAR · GMP', d:'Due Fri', v:'$2.80M', pm:'GR', tags:['Healthcare','GMP'], urgent:true },
-      { c:'Ada County', n:'Courthouse HVAC retrofit', m:'Hard bid', d:'Due Thu 11a', v:'$1.24M', pm:'EP', tags:['Civic'], urgent:true },
-    ]},
-    { id:'qc', t:'Review / QC', items:[
-      { c:'Linden Partners', n:'Linden MOB — Tenant fit', m:'Negotiated', d:'Submit Mon', v:'$870k', pm:'JM', tags:['Healthcare'] },
-    ]},
-    { id:'sent', t:'Submitted · awaiting', items:[
-      { c:'City of Meridian', n:'Kleiner Park Shelter', m:'PW', d:'Opened 11/20', v:'$215k', pm:'PN', tags:['Parks'] },
-      { c:'St. Luke’s', n:'IT Dept. MEP refresh', m:'Neg', d:'Opened 11/14', v:'$1.9M', pm:'EP', tags:['Healthcare'] },
-      { c:'Valley Reg. Airport', n:'Hangar 4 re-deck', m:'Hard bid', d:'Opened 11/28', v:'$1.1M', pm:'GR', tags:['Aviation'] },
-    ]},
-  ];
+const STAGE_COLS = [
+  { id:'ITB',             label:'Lead / ITB Received' },
+  { id:'Takeoff/Pricing', label:'Quantities & Pricing' },
+  { id:'Review',          label:'Review / QC' },
+  { id:'Submit',          label:'Submitted' },
+  { id:'Won',             label:'Won' },
+  { id:'Lost',            label:'Lost' },
+];
+
+const PipelineView = ({ onOpenBid }) => {
+  const [bids, setBids]             = uS_home(null);
+  const [error, setError]           = uS_home(null);
+  const [showCreate, setShowCreate] = uS_home(false);
+  const [form, setForm]             = uS_home({ gc_name:'', name:'', due_date:'', project_type:'' });
+  const [saving, setSaving]         = uS_home(false);
+
+  uE_home(() => {
+    let cancelled = false;
+    async function load() {
+      const { data, error: err } = await window.dbHelpers.getBids();
+      if (!cancelled) {
+        if (err) setError(err.message);
+        else setBids(data || []);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
+  const bidsForStage = uM_home(() => {
+    if (!bids) return {};
+    const m = {};
+    STAGE_COLS.forEach(c => { m[c.id] = []; });
+    bids.forEach(b => { if (m[b.stage]) m[b.stage].push(b); });
+    return m;
+  }, [bids]);
+
+  async function handleCreate(e) {
+    e.preventDefault();
+    if (!form.gc_name || !form.name || !form.due_date || !form.project_type) return;
+    setSaving(true);
+    const { data: newBid, error: err } = await window.dbHelpers.addBid(form);
+    setSaving(false);
+    if (err) { alert('Error creating bid: ' + err.message); return; }
+    setBids(prev => [newBid, ...(prev || [])]);
+    setForm({ gc_name:'', name:'', due_date:'', project_type:'' });
+    setShowCreate(false);
+  }
+
+  async function handleAdvance(bid) {
+    const next = window.dbHelpers.STAGE_NEXT[bid.stage];
+    if (!next) return;
+    const { error: err } = await window.dbHelpers.updateBidStage(bid.id, next);
+    if (err) { alert('Error: ' + err.message); return; }
+    setBids(prev => prev.map(b => b.id === bid.id ? { ...b, stage: next } : b));
+  }
+
+  async function handleTerminal(bid, stage) {
+    const { error: err } = await window.dbHelpers.updateBidStage(bid.id, stage);
+    if (err) { alert('Error: ' + err.message); return; }
+    setBids(prev => prev.map(b => b.id === bid.id ? { ...b, stage } : b));
+  }
+
+  if (bids === null && !error) return <window.Spinner />;
+  if (error) return (
+    <div style={{padding:40, color:'var(--bad)'}}>
+      Something went wrong — check your connection and try again.
+      <button className="btn ghost sm" style={{marginLeft:12}} onClick={() => { setError(null); setBids(null); }}>Retry</button>
+    </div>
+  );
+
+  const totalBids = bids.length;
+
   return (
     <div className="view active">
       <div className="page-head">
         <div>
           <div className="page-title">Pipeline</div>
-          <div className="page-sub">22 active opportunities · <b style={{color:'var(--accent)'}}>3 urgent</b> · $11.8M weighted</div>
+          <div className="page-sub">{totalBids} {totalBids === 1 ? 'bid' : 'bids'} tracked</div>
         </div>
         <div className="spacer"></div>
         <div className="actions">
-          <div className="row gap-sm" style={{marginRight:8}}>
-            <span className="chip solid">All owners</span>
-            <span className="chip">Sector · any</span>
-            <span className="chip">Due · next 14d</span>
-            <button className="btn ghost sm"><Icon.filter/> More</button>
-          </div>
-          <button className="btn">Board</button>
-          <button className="btn ghost">Table</button>
-          <button className="btn accent"><Icon.plus/> New bid</button>
+          <button className="btn accent" onClick={() => setShowCreate(true)}><Icon.plus/> New bid</button>
         </div>
       </div>
 
       <div style={{padding:'16px 20px 40px', overflowX:'auto'}}>
-        <div className="kan">
-          {cols.map(col => (
-            <div className="col" key={col.id}>
-              <div className="col-head"><span>{col.t}</span><span className="n">{col.items.length}</span></div>
-              {col.items.map((it,i)=>(
-                <div key={i} className={`card-lead ${it.urgent?'urgent':''}`} onClick={()=> col.id==='price' && window.__go('estimator')}>
-                  <div className="row" style={{justifyContent:'space-between',alignItems:'flex-start'}}>
-                    <div style={{minWidth:0}}>
-                      <div className="name">{it.n}</div>
-                      <div className="meta">{it.c} · {it.m}</div>
-                    </div>
-                    <span className={`pm ${it.pm[0].toLowerCase()}`} title={it.pm}>{it.pm}</span>
+        {totalBids === 0 && !showCreate ? (
+          <window.EmptyState
+            heading="No bids yet"
+            body="Create your first bid to start tracking the pipeline."
+            action={{ label:'New Bid', onClick:() => setShowCreate(true) }}
+          />
+        ) : (
+          <div className="kan">
+            {STAGE_COLS.map(col => {
+              const colBids = bidsForStage[col.id] || [];
+              const isITB = col.id === 'ITB';
+              return (
+                <div className="col" key={col.id}>
+                  <div className="col-head">
+                    <span>{col.label}</span>
+                    <span className="n">{colBids.length}</span>
+                    {isITB && <button className="btn ghost sm" style={{marginLeft:'auto',fontSize:11}} onClick={() => setShowCreate(v => !v)}><Icon.plus/></button>}
                   </div>
-                  <div className="row" style={{justifyContent:'space-between',marginTop:7}}>
-                    <span className="muted" style={{fontSize:11.5}}>{it.d}</span>
-                    <span className="money tnum" style={{fontSize:12.5}}>{it.v}</span>
-                  </div>
-                  <div className="row-tags">
-                    {it.tags.map((t,j)=><span key={j} className="chip">{t}</span>)}
-                    {it.urgent && <span className="chip bad"><span className="dot"></span>Urgent</span>}
-                  </div>
+
+                  {isITB && showCreate && (
+                    <form className="card" style={{padding:'12px 14px',borderColor:'var(--accent)',borderWidth:1.5,marginBottom:8}} onSubmit={handleCreate}>
+                      <div style={{fontSize:10.5,fontWeight:700,color:'var(--mute)',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:3}}>Client / GC</div>
+                      <input required value={form.gc_name} onChange={e=>setForm(f=>({...f,gc_name:e.target.value}))} placeholder="Turner Construction" style={{width:'100%',border:'1px solid var(--line)',borderRadius:'var(--r-sm)',padding:'5px 8px',fontSize:12.5,background:'var(--paper)',marginBottom:6}}/>
+                      <div style={{fontSize:10.5,fontWeight:700,color:'var(--mute)',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:3}}>Project Name</div>
+                      <input required value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="Caldwell Medical Center" style={{width:'100%',border:'1px solid var(--line)',borderRadius:'var(--r-sm)',padding:'5px 8px',fontSize:12.5,background:'var(--paper)',marginBottom:6}}/>
+                      <div style={{fontSize:10.5,fontWeight:700,color:'var(--mute)',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:3}}>Bid Due Date</div>
+                      <input required type="date" value={form.due_date} onChange={e=>setForm(f=>({...f,due_date:e.target.value}))} style={{width:'100%',border:'1px solid var(--line)',borderRadius:'var(--r-sm)',padding:'5px 8px',fontSize:12.5,background:'var(--paper)',marginBottom:6}}/>
+                      <div style={{fontSize:10.5,fontWeight:700,color:'var(--mute)',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:3}}>Project Type</div>
+                      <input required value={form.project_type} onChange={e=>setForm(f=>({...f,project_type:e.target.value}))} placeholder="Healthcare TI" style={{width:'100%',border:'1px solid var(--line)',borderRadius:'var(--r-sm)',padding:'5px 8px',fontSize:12.5,background:'var(--paper)',marginBottom:8}}/>
+                      <div style={{display:'flex',gap:6}}>
+                        <button className="btn accent sm" type="submit" disabled={saving}>{saving?'Saving…':'Create Bid'}</button>
+                        <button className="btn ghost sm" type="button" onClick={()=>setShowCreate(false)}>Cancel</button>
+                      </div>
+                    </form>
+                  )}
+
+                  {colBids.map((bid) => {
+                    const nextStage = window.dbHelpers.STAGE_NEXT[bid.stage];
+                    return (
+                      <div key={bid.id} className="card-lead" onClick={() => onOpenBid && onOpenBid(bid.id, bid.name)} style={{cursor:'pointer'}}>
+                        <div style={{fontWeight:600,fontSize:13,marginBottom:2}}>{bid.name}</div>
+                        <div className="meta" style={{fontSize:11.5,marginBottom:6}}>{bid.gc_name} · {bid.project_type || '—'}</div>
+                        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:4}}>
+                          <span className="muted" style={{fontSize:11}}>{bid.due_date ? `Due ${bid.due_date}` : '—'}</span>
+                          <div style={{display:'flex',gap:4}} onClick={e => e.stopPropagation()}>
+                            {bid.stage !== 'Won' && bid.stage !== 'Lost' && (
+                              nextStage
+                                ? <button className="btn ghost sm" style={{fontSize:11,padding:'2px 6px'}} onClick={() => handleAdvance(bid)}>→ {nextStage}</button>
+                                : <>
+                                    <button className="chip ok" style={{cursor:'pointer'}} onClick={() => handleTerminal(bid, 'Won')}>Mark Won</button>
+                                    <button className="chip bad" style={{cursor:'pointer'}} onClick={() => handleTerminal(bid, 'Lost')}>Mark Lost</button>
+                                  </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {colBids.length === 0 && !isITB && (
+                    <div style={{padding:'12px 8px',fontSize:12,color:'var(--mute)',textAlign:'center'}}>—</div>
+                  )}
                 </div>
-              ))}
-              <div className="add-placeholder"><Icon.plus/> Add opportunity</div>
-            </div>
-          ))}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
