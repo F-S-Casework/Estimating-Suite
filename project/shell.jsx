@@ -60,7 +60,7 @@ function EmptyState({ heading, body, action }) {
   );
 }
 
-function Rail({ active, onGo }) {
+function Rail({ active, onGo, railOpen, setRailOpen }) {
   const groups = {};
   NAV.forEach(n => { (groups[n.group] ||= []).push(n); });
   const iconFor = (id) => {
@@ -83,8 +83,10 @@ function Rail({ active, onGo }) {
         </React.Fragment>
       ))}
       <div className="rail-foot">
-        <span className="dot"></span>
-        <span>Synced · OneDrive</span>
+        {railOpen && <><span className="dot"></span><span>Synced · OneDrive</span></>}
+        <button className="rail-toggle" onClick={() => setRailOpen(p => !p)} title={railOpen ? 'Collapse nav' : 'Expand nav'}>
+          {railOpen ? '‹' : '›'}
+        </button>
       </div>
     </nav>
   );
@@ -133,6 +135,7 @@ function AuthenticatedApp({ session }) {
     try { return localStorage.getItem('fs-active-bid') || null; } catch { return null; }
   });
   const [activeBidName, setActiveBidName] = useState('');
+  const [railOpen, setRailOpen] = useState(true);
 
   const openBid = (bidId, bidName) => {
     setActiveBidId(bidId);
@@ -202,8 +205,8 @@ function AuthenticatedApp({ session }) {
   return (
     <div id="app">
       <Topbar crumb={crumb} actions={actions} initials={initials} onLogout={handleLogout} />
-      <div id="main">
-        <Rail active={active} onGo={go} />
+      <div id="main" className={railOpen ? '' : 'rail-collapsed'}>
+        <Rail active={active} onGo={go} railOpen={railOpen} setRailOpen={setRailOpen} />
         <main id="content">
           {(() => {
             if (!window.Views) return <div style={{padding:40}}>Loading…</div>;
