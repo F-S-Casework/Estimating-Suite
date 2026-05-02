@@ -151,7 +151,8 @@ body{
 .btn svg{width:14px;height:14px}
 
 /* ── main: rail + content ─────────────────────────── */
-#main{display:grid;grid-template-columns:200px 1fr;overflow:hidden}
+#main{display:grid;grid-template-columns:200px 1fr;overflow:hidden;transition:grid-template-columns .2s ease}
+#main.rail-collapsed{grid-template-columns:48px 1fr}
 #rail{
   background:var(--panel-alt);
   border-right:1px solid var(--line);
@@ -189,6 +190,13 @@ body{
 .rail-item.active .count{color:var(--ink-2)}
 .rail-item svg{width:15px;height:15px;color:var(--ink-3);flex-shrink:0}
 .rail-foot{margin-top:auto;padding:12px 10px;border-top:1px solid var(--line);font-size:11px;color:var(--mute);display:flex;align-items:center;gap:8px}
+.rail-toggle{background:none;border:none;cursor:pointer;color:var(--ink-3);padding:2px 4px;border-radius:var(--r-sm);line-height:1;font-size:14px;flex-shrink:0}
+.rail-toggle:hover{background:var(--panel-3);color:var(--ink)}
+#main.rail-collapsed .rail-item span{display:none}
+#main.rail-collapsed .rail-sec{display:none}
+#main.rail-collapsed .rail-foot span{display:none}
+#main.rail-collapsed .rail-item{justify-content:center;padding:8px 6px}
+#main.rail-collapsed .rail-foot{justify-content:center;padding:10px 6px}
 .rail-foot .dot{width:6px;height:6px;border-radius:50%;background:var(--ok)}
 
 #content{overflow-y:auto;overflow-x:hidden;background:var(--bg)}
