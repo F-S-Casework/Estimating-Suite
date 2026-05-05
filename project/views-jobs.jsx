@@ -98,10 +98,32 @@ function JobsView() {
 // ── JOB DETAIL ─────────────────────────────────────────
 function JobView() {
   const job = window.__activeJob || {};
+  const [editing, setEditing] = uS_jobs(false);
+  const [savingJob, setSavingJob] = uS_jobs(false);
+  const [jobDraft, setJobDraft] = uS_jobs({
+    status: job.status || 'Ready',
+    gc_name: job.gc_name || '',
+    install_start: job.install_start || '',
+    install_end: job.install_end || '',
+    notes: job.notes || '',
+    contract_value: job.contract_value || ''
+  });
+
+  const [coDraft, setCoDraft] = uS_jobs({ description:'', amount:'', status:'Submitted' });
   const fmtV = n => n ? '$' + Number(n).toLocaleString(undefined, {maximumFractionDigits:0}) : '—';
   const fmtDate = d => d ? new Date(d + 'T00:00:00').toLocaleDateString(undefined, {month:'short',day:'numeric',year:'numeric'}) : 'TBD';
 
   const [cos, setCos] = uS_jobs(null);
+  uE_jobs(() => {
+    setJobDraft({
+      status: job.status || 'Ready',
+      gc_name: job.gc_name || '',
+      install_start: job.install_start || '',
+      install_end: job.install_end || '',
+      notes: job.notes || '',
+      contract_value: job.contract_value || ''
+    });
+  }, [job.id]);
   uE_jobs(() => {
     if (!job.id) { setCos([]); return; }
     let cancelled = false;
@@ -119,6 +141,36 @@ function JobView() {
   const installWindow = job.install_start
     ? `${fmtDate(job.install_start)}${job.install_end ? ' → ' + fmtDate(job.install_end) : ''}`
     : 'TBD';
+
+  async function saveJob() {
+    setSavingJob(true);
+    const payload = { ...jobDraft, contract_value: jobDraft.contract_value === '' ? null : Number(jobDraft.contract_value) };
+    const { data, error } = await window.dbHelpers.updateJob(job.id, payload);
+    setSavingJob(false);
+    if (error) return alert('Failed to save job: ' + error.message);
+    window.__activeJob = data;
+    setEditing(false);
+  }
+
+  async function addCO(e) {
+    e.preventDefault();
+    if (!coDraft.description || coDraft.amount === '') return;
+    const { data, error } = await window.dbHelpers.addChangeOrder({
+      job_id: job.id,
+      description: coDraft.description,
+      amount: Number(coDraft.amount),
+      status: coDraft.status
+    });
+    if (error) return alert('Failed to add CO: ' + error.message);
+    setCos(prev => ([...(prev||[]), data]));
+    setCoDraft({ description:'', amount:'', status:'Submitted' });
+  }
+
+  async function setCOStatus(co, status) {
+    const { data, error } = await window.dbHelpers.updateChangeOrder(co.id, { status });
+    if (error) return alert('Failed to update CO: ' + error.message);
+    setCos(prev => (prev||[]).map(c => c.id === co.id ? data : c));
+  }
 
   if (!job.id) return (
     <div className="view active" style={{display:'flex',alignItems:'center',justifyContent:'center',height:'60vh'}}>
