@@ -9,10 +9,28 @@ function JobsView() {
     let cancelled = false;
     async function load() {
       const { data, error: err } = await window.dbHelpers.getJobs();
-      if (!cancelled) {
-        if (err) setError(err.message);
-        else setJobs(data || []);
+      if (err) {
+        if (!cancelled) setError(err.message);
+        return;
       }
+
+      let resolvedJobs = data || [];
+      if (!resolvedJobs.length) {
+        const { data: bids, error: bidsErr } = await window.dbHelpers.getBids();
+        if (!bidsErr) {
+          const wonBids = (bids || []).filter(b => b.stage === 'Won');
+          for (const bid of wonBids) {
+            const { data: job } = await window.dbHelpers.markBidWon(bid);
+            if (job) resolvedJobs.push(job);
+          }
+          if (wonBids.length) {
+            const { data: refreshed } = await window.dbHelpers.getJobs();
+            resolvedJobs = refreshed || resolvedJobs;
+          }
+        }
+      }
+
+      if (!cancelled) setJobs(resolvedJobs);
     }
     load();
     return () => { cancelled = true; };
